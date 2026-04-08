@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 
-void main() => runApp(MyApp());
+import 'app/app_widget.dart';
 
-class MyApp extends StatelessWidget {
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const AppEntry());
+}
+
+class AppEntry extends StatelessWidget {
+  const AppEntry({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      home: AppWidget(),
-    );
+    return const AppWidget();
   }
 }
