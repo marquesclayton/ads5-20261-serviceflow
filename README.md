@@ -1,7 +1,7 @@
 # 🚀 Projeto ServiceFlow - Gestão Inteligente de O.S.
 
 ## 📋 Visão Geral
-O **ServiceFlow** é um sistema de gestão de ordens de serviço (O.S.) desenvolvido como parte da disciplina de Desenvolvimento de Software Móvel. O projeto foca em mobilidade, operação *offline-first* e arquitetura modular de alta performance, simulando um ambiente real de desenvolvimento corporativo.
+O **ServiceFlow** é um sistema de gestão de ordens de serviço (O.S.) desenvolvido como parte da disciplina de Desenvolvimento de Sistemas para Dispositivos Móveis. O projeto foca em mobilidade, operação *offline-first* e arquitetura modular de alta performance, simulando um ambiente real de desenvolvimento corporativo.
 
 ## 🎯 Objetivo
 Padronizar o desenvolvimento de um app profissional utilizando **Flutter 3.41.4** e **Dart 3.11.1**, aplicando conceitos de arquitetura limpa, generics e injeção de dependência para eliminar o retrabalho e garantir a escalabilidade do código rumo à avaliação N2.
