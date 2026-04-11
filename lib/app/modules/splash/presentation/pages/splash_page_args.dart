@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:serviceflow/app/shared/widgets/app_logo.dart';
 
 import '../../../../app_routes.dart';
 
 class SplashPage extends StatefulWidget {
-  final int maxSeconds;
-  const SplashPage({super.key, this.maxSeconds = 7});
+  const SplashPage({super.key});
 
   @override
   State<SplashPage> createState() => _SplashPageState();
@@ -18,7 +16,10 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(Duration(seconds: widget.maxSeconds), () {
+  }
+
+  void iniciaTimer(int maxSeconds) {
+    _timer = Timer(Duration(seconds: maxSeconds), () {
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(AppRoutes.login);
     });
@@ -32,8 +33,11 @@ class _SplashPageState extends State<SplashPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Recuperamos o objeto e avisamos ao Flutter: "Trate isso como um OrdemServico"
+    final maxSeconds = ModalRoute.of(context)!.settings.arguments as int? ?? 7;
+    iniciaTimer(maxSeconds);
+
     return const Scaffold(
-      backgroundColor: Color.fromARGB(255, 222, 231, 246),
       body: SafeArea(
         child: Center(
           child: Column(
@@ -44,11 +48,6 @@ class _SplashPageState extends State<SplashPage> {
               Text('ServiceFlow', style: TextStyle(fontSize: 20)),
               SizedBox(height: 8),
               Text('Carregando...'),
-              SizedBox(height: 35),
-              Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              child: AppLogo(width: double.infinity, height: 250),
-              ),
             ],
           ),
         ),
