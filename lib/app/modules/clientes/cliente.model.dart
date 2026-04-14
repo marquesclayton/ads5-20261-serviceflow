@@ -1,4 +1,4 @@
-import 'package:serviceflow/app/core/models/base.model.dart';
+import 'package:serviceflow/app/core/base/base.model.dart';
 
 class Cliente extends BaseModel {
   final String nome;
