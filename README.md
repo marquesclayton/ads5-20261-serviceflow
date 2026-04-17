@@ -88,6 +88,12 @@ classDiagram
     }
 
     %% Concrete Implementations
+    class Cliente {
+        +String nome
+        +String telefone
+        +String email
+    }
+
     class OrdemServico {
         +String cliente
         +String status
@@ -110,6 +116,7 @@ classDiagram
     }
 
     %% Relationships
+    BaseModel <|-- Cliente
     BaseModel <|-- OrdemServico
     BaseModel <|-- Usuario
     BaseRepository <|-- OrdemServicoRepository
