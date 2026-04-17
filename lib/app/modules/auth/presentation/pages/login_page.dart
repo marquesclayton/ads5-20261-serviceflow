@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:serviceflow/app/core/mixins/loader.mixin.dart';
+import 'package:serviceflow/app/core/mixins/messages.mixin.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
 // Importe o novo widget do logo
 import '../../../../shared/widgets/app_logo.dart';
@@ -10,7 +12,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends State<LoginPage> with MessagesMixin, LoaderMixin {
   late TextEditingController emailController;
   late TextEditingController senhaController;
 
@@ -58,8 +60,12 @@ class _LoginPageState extends State<LoginPage> {
                   controller: senhaController),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () => Navigator.pushNamed(context, '/dashboard'),
+                onPressed: () => showSuccess(context, "message"),
                 child: const Text("Entrar"),
+              ),
+              ElevatedButton(
+                onPressed: () => showLoading(context),
+                child: const Text("Inicia o Loader"),
               ),
             ],
           ),
