@@ -17,6 +17,7 @@ dependencies:
   flutter:
     sdk: flutter
   supabase_flutter: ^2.12.2
+  supabase: ^2.10.4
 flutter:
   assets:
     - assets/images/
