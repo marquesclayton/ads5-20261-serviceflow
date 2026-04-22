@@ -20,7 +20,7 @@ class _SplashPageState extends State<SplashPage> {
     super.initState();
     _timer = Timer(Duration(seconds: widget.maxSeconds), () {
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+      Navigator.of(context).pushReplacementNamed(AppRoutes.menuLab);
     });
   }
 
@@ -46,8 +46,8 @@ class _SplashPageState extends State<SplashPage> {
               Text('Carregando...'),
               SizedBox(height: 35),
               Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              child: AppLogo(width: double.infinity, height: 250),
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: AppLogo(width: double.infinity, height: 250),
               ),
             ],
           ),

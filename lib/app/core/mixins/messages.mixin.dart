@@ -2,25 +2,53 @@ import 'package:flutter/material.dart';
 
 mixin MessagesMixin {
   void showSuccess(BuildContext context, String message) {
-    _showSnackBar(context, message, Colors.green, Icons.check_circle);
+    final theme = Theme.of(context);
+    _showSnackBar(
+      context,
+      message,
+      backgroundColor: theme.colorScheme.primaryContainer,
+      textColor: theme.colorScheme.onPrimaryContainer,
+      icon: Icons.check_circle,
+      iconColor: theme.colorScheme.primary,
+    );
   }
 
   void showError(BuildContext context, String message) {
-    _showSnackBar(context, message, Colors.redAccent, Icons.error);
+    final theme = Theme.of(context);
+    _showSnackBar(
+      context,
+      message,
+      backgroundColor: theme.colorScheme.errorContainer,
+      textColor: theme.colorScheme.onErrorContainer,
+      icon: Icons.error_outline,
+      iconColor: theme.colorScheme.error,
+    );
   }
 
   void _showSnackBar(
-      BuildContext context, String message, Color color, IconData icon) {
+    BuildContext context,
+    String message, {
+    required Color backgroundColor,
+    required Color textColor,
+    required IconData icon,
+    required Color iconColor,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: color,
+        backgroundColor: backgroundColor,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         content: Row(
           children: [
-            Icon(icon, color: Colors.white),
+            Icon(icon, color: iconColor),
             const SizedBox(width: 12),
-            Expanded(child: Text(message)),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
+              ),
+            ),
           ],
         ),
       ),
