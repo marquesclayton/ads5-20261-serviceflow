@@ -1,5 +1,5 @@
 abstract class BaseModel {
-  final String? id;
+  final int? id;
   final DateTime? createdAt;
 
   BaseModel({
@@ -9,7 +9,7 @@ abstract class BaseModel {
 
   // Construtor nomeado para criar a base a partir de um Map
   BaseModel.fromMap(Map<String, dynamic> map)
-      : id = map['id'] as String?,
+      : id = map['id'] as int?,
         createdAt = map['createdAt'] != null
             ? DateTime.tryParse(map['createdAt'].toString())
             : null;

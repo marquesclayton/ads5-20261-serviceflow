@@ -10,6 +10,7 @@ class CustomTextField extends StatelessWidget {
   final TextInputType keyboardType;
   final TextInputAction textInputAction;
   final VoidCallback? onFieldSubmitted;
+  final int? maxLength;
 
   const CustomTextField({
     super.key,
@@ -22,6 +23,7 @@ class CustomTextField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.textInputAction = TextInputAction.next,
     this.onFieldSubmitted,
+    this.maxLength,
   });
 
   @override
@@ -36,6 +38,7 @@ class CustomTextField extends StatelessWidget {
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       onFieldSubmitted: (_) => onFieldSubmitted?.call(),
+      maxLength: maxLength,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -59,6 +62,7 @@ class CustomTextField extends StatelessWidget {
         // Espaçamento interno padronizado
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+        counterText: '',
       ),
     );
   }

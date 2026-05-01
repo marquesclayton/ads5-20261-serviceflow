@@ -5,8 +5,16 @@ class Cliente extends BaseModel {
   final String email;
   final String telefone;
 
+  String? endereco;
+
+  String? cidade;
+
+  String? estado;
+
+  String? cep;
+
   Cliente({
-    String? id,
+    int? id,
     DateTime? createdAt,
     required this.nome,
     required this.email,
