@@ -36,11 +36,11 @@ Utilizamos a estrutura **Base-Driven Architecture**, focada em componentes gené
 ```text
 lib/
 ├── app/
-│   ├── core/             # Framework base (Model, Repository, Http, Storage)
-│   │   ├── models/        # BaseModel
-│   │   ├── services/      # DioClient, DatabaseHelper, OfflineSync
+│   ├── core/              # Framework base (Model, Repository, Http, Storage)
+│   │   ├── base/          # Estrutura/Camadas Base (BaseModel, BaseRepository, BaseValidtion, BaseService, BaseController, BasePage, BasePrivider, BaseSchedule
+│   │   ├── helpers/       # Camada que disponibiliza serviços utilitários
+│   │   ├── mixins/        # Loader e Messager mixins
 │   │   ├── repositories/  # BaseRepository<T>
-│   │   ├── mixins/        # UiFeedbackMixin, ValidatorMixin
 │   │   └── theme/         # Design System (Colors, Fonts, Themes)
 │   ├── shared/           # Widgets Reutilizáveis (CustomTextField, CustomButton)
 │   └── modules/          # Funcionalidades (Feature-first)
