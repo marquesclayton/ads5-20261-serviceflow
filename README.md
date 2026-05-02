@@ -257,7 +257,6 @@ classDiagram
     
     OrdemServico }o-- Cliente : pertence_a
     OrdemServico }o-- Tecnico : atribuida_a
-    OrdemServico ||--o{ OsItens : contem
     OsItens }o-- Servico : refere_a
     
     DioClient *-- AuthInterceptor : utiliza
