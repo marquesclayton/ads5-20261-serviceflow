@@ -107,55 +107,55 @@ lib/
 ```mermaid
 classDiagram
     %% Camadas Base (Core Framework)
-    class BaseModel~T~ {
+    class BaseModel {
         <<abstract>>
         +int? id
         +int isSync
         +DateTime? createdAt
-        +fromMap(Map map)*
-        +toMap() Map~String, dynamic~
+        +fromMap(Map map)
+        +toMap() Map
         +toJson() String
-        +copyWith(...) T
+        +copyWith() T
     }
 
-    class BaseRepository~E~ {
+    class BaseRepository {
         <<abstract>>
         +DioClient dio
         +Database db
-        +String tableName*
-        +insert(E item) Future~E~
-        +update(E item) Future~E~
-        +delete(int id) Future~bool~
-        +findAll() Future~List~E~~
-        +findById(int id) Future~E?~
-        +syncToServer() Future~bool~
-        +syncFromServer() Future~List~E~~
+        +String tableName
+        +insert(item) Future
+        +update(item) Future
+        +delete(int id) Future
+        +findAll() Future
+        +findById(int id) Future
+        +syncToServer() Future
+        +syncFromServer() Future
     }
 
-    class BaseValidation~E,R~ {
+    class BaseValidation {
         <<abstract>>
-        +validate(E entity) Future~ValidationResult~R~~
-        +validateAsync(E entity) Future~ValidationResult~R~~
+        +validate(entity) Future
+        +validateAsync(entity) Future
     }
 
-    class BaseService~E,R,V~ {
+    class BaseService {
         <<abstract>>
-        +BaseRepository~E~ repository
-        +BaseValidation~E,R~ validation
-        +create(E entity) Future~ServiceResult~E~~
-        +update(E entity) Future~ServiceResult~E~~
-        +delete(int id) Future~ServiceResult~bool~~
-        +findAll() Future~ServiceResult~List~E~~~
+        +BaseRepository repository
+        +BaseValidation validation
+        +create(entity) Future
+        +update(entity) Future
+        +delete(int id) Future
+        +findAll() Future
     }
 
     class DioClient {
         <<singleton>>
         +Dio instance
         +addInterceptor(Interceptor)
-        +get(String path) Future~Response~
-        +post(String path, data) Future~Response~
-        +put(String path, data) Future~Response~
-        +delete(String path) Future~Response~
+        +get(String path) Future
+        +post(String path, data) Future
+        +put(String path, data) Future
+        +delete(String path) Future
     }
 
     class AuthInterceptor {
@@ -179,9 +179,9 @@ classDiagram
         +String nomeCompleto
         +String grupoId
         +String perfil
-        +DateTime? ultimoLogin
-        +String? avatarLocalPath
-        +String? configuracoes
+        +DateTime ultimoLogin
+        +String avatarLocalPath
+        +String configuracoes
         +bool ativo
     }
 
@@ -189,59 +189,59 @@ classDiagram
         +String nome
         +String email
         +String telefone
-        +String? documento
-        +String? endereco
-        +String? cidade
-        +String? estado
-        +String? cep
+        +String documento
+        +String endereco
+        +String cidade
+        +String estado
+        +String cep
         +bool ativo
     }
 
     class Tecnico {
         +String nome
-        +String? especialidade
+        +String especialidade
         +bool ativo
     }
 
     class Servico {
         +String descricao
         +double preco
-        +String? tempoEstimado
+        +String tempoEstimado
         +bool ativo
     }
 
     class OrdemServico {
         +int clienteId
         +int tecnicoId
-        +String? observacao
-        +String? pecasAplicadas
+        +String observacao
+        +String pecasAplicadas
         +double valorPecas
-        +String? fotoAntes
-        +String? fotoDepois
-        +String? assinatura
+        +String fotoAntes
+        +String fotoDepois
+        +String assinatura
         +bool ativo
     }
 
     class OsItens {
         +int osId
         +int servicoId
-        +String? descricaoSnapshot
-        +double? precoSnapshot
+        +String descricaoSnapshot
+        +double precoSnapshot
         +bool ativo
     }
 
     %% Repositórios Implementados
     class UsuarioRepository {
         +tableName = "usuarios"
-        +login(email, senha) Future~Usuario?~
-        +getBySupabaseId(id) Future~Usuario?~
-        +updateConfiguracoes(config) Future~bool~
+        +login(email, senha) Future
+        +getBySupabaseId(id) Future
+        +updateConfiguracoes(config) Future
     }
 
     class ClienteRepository {
         +tableName = "clientes"
-        +getByDocumento(doc) Future~Cliente?~
-        +searchByName(nome) Future~List~Cliente~~
+        +getByDocumento(doc) Future
+        +searchByName(nome) Future
     }
 
     %% Relacionamentos
@@ -255,16 +255,16 @@ classDiagram
     BaseRepository <|-- UsuarioRepository
     BaseRepository <|-- ClienteRepository
     
-    OrdemServico }o-- Cliente : pertence
-    OrdemServico }o-- Tecnico : atribuida
-    OrdemServico ||--o{ OsItens : contem
-    OsItens }o-- Servico : referencia
+    OrdemServico --> Cliente
+    OrdemServico --> Tecnico
+    OrdemServico --> OsItens
+    OsItens --> Servico
     
-    DioClient *-- AuthInterceptor : utiliza
-    DioClient ..> ErrorModel : mapeia_erro
-    BaseRepository ..> DioClient : consome
-    UsuarioRepository ..> Usuario : gerencia
-    ClienteRepository ..> Cliente : gerencia
+    DioClient --> AuthInterceptor
+    DioClient --> ErrorModel
+    BaseRepository --> DioClient
+    UsuarioRepository --> Usuario
+    ClienteRepository --> Cliente
 ```
 ## 📊 Schema do Banco de Dados SQLite
 
