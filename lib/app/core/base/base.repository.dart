@@ -103,6 +103,17 @@ abstract class BaseRepository<E extends BaseModel> {
     );
   }
 
+  /// Buscar todas as entidades com sincronização pendente
+  Future<List<E>> findAllPendingSync() async {
+    final db = await getConnection();
+    final result = await db.query(
+      tableName,
+      where: 'is_sync = ? AND ativo = ?',
+      whereArgs: [0, 1],
+    );
+    return result.map((map) => fromMap(map)).toList();
+  }
+
   // Deletar (Delete)
   Future<int> delete(int id) async {
     final db = await _dbHelper.database;

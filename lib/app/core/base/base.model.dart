@@ -1,7 +1,7 @@
 abstract class BaseModel {
   final int? id;
   final DateTime? createdAt;
-  final int isSync; // 0 = não sincronizado, 1 = sincronizado
+  int isSync; // 0 = não sincronizado, 1 = sincronizado
   final bool ativo; // true = ativo, false = inativo (soft delete)
 
   BaseModel({

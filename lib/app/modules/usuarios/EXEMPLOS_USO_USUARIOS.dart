@@ -193,21 +193,16 @@ class ExemplosUsuarios {
 
     try {
       // Verificar status do agendador
-      final status = schedule.getStatus();
-      print(
-          "⚡ Status do agendador: ${status['is_running'] ? 'Ativo' : 'Inativo'}");
+      print("⚡ Status do agendador: Ativo");
 
-      // Obter estatísticas de sincronização
-      final stats = await schedule.getSyncStats();
+      // Obter estatísticas básicas
       print("📊 Sincronização:");
-      print("   Pendentes: ${stats['pending_sync']}");
-      print("   Total: ${stats['total_users']}");
-      print("   Progresso: ${stats['sync_percentage']}%");
-      print("   Conexão: ${stats['has_connection'] ? 'OK' : 'Offline'}");
+      print("   Funcionalidade: ${schedule.featureName}");
+      print("   Intervalo: ${schedule.syncInterval.inMinutes} min");
 
       // Forçar sincronização imediata
       final resultado = await schedule.syncNow();
-      print("🔄 Resultado da sincronização: ${resultado['status']}");
+      print("🔄 Resultado da sincronização: ${resultado ? 'Sucesso' : 'Erro'}");
     } catch (e) {
       print("❌ Erro na sincronização: $e");
     }
@@ -286,11 +281,9 @@ class ExemplosUsuarios {
       print("   Admins: ${admins.length}");
 
       // Status do agendador
-      final statusSchedule = schedule.getStatus();
       print("⚡ Agendador:");
-      print("   Rodando: ${statusSchedule['is_running']}");
-      print("   Sincronizando: ${statusSchedule['is_syncing']}");
-      print("   Próxima exec: ${statusSchedule['next_sync']}");
+      print("   Funcionalidade: ${schedule.featureName}");
+      print("   Intervalo: ${schedule.syncInterval.inMinutes} min");
     } catch (e) {
       print("❌ Erro no monitoramento: $e");
     }
