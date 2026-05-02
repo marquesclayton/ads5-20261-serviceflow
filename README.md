@@ -11,15 +11,21 @@ O projeto implementa uma **Arquitetura Offline-First com Camadas Base**, focada 
 
 ### 📦 Camadas Base (Core Framework)
 * **BaseModel<T>:** Classe abstrata com `id`, `isSync`, `createdAt`, métodos de conversão e controle de sincronização
-* **BaseRepository<E>:** Abstração genérica para operações CRUD offline-first (SQLite) + sincronização API
-* **BaseValidation<E,R>:** Validações assíncronas type-safe com regras de negócio específicas
-* **BaseService<E,R,V>:** Orquestração validation → repository com fluxo assíncrono
-* **BaseController<E,R,V,S>:** Gestão de estados UI (extends `ChangeNotifier`) com loading/error
+* **BaseRepository<E>:** Abstração genérica para operações CRUD offline-first usando **DbHelper** (SQLite) como fonte primária
+* **BaseValidation<E,R>:** Validações assíncronas type-safe com regras de negócio específicas para create/update
+* **BaseService<E,R,V>:** Orquestração validation → repository com fluxo assíncrono de negócio
+* **BaseController<E,R,V,S>:** Gestão de estados UI (extends `StatefulWidget`) com loading/error
 
-### 🌐 Camada de Comunicação
-* **DioClient (AppClient):** HTTP Client singleton com interceptors automáticos
+### 🌐 Camada de Comunicação Externa
+* **AppClient:** HTTP Client singleton baseado no Dio com interceptors automáticos para APIs externas
 * **AuthInterceptor:** Injeção automática de JWT Token e tratamento global de erros (401/403)
+* **Provider Layer:** Providers específicos (UsuarioProvider) para comunicação Supabase via AppClient
 * **ErrorModel:** Modelo padronizado para tratamento de erros da API
+
+### 🗄️ Camada de Persistência Local
+* **DbHelper:** Singleton SQLite manager para controle do banco local como fonte primária
+* **SQLite Database:** Banco local com schema completo para operação offline-first
+* **Sync Control:** Campo `is_sync` em todas as tabelas para controle de sincronização
 
 ### 🎨 Sistema de Componentes Customizados
 * **Custom Widgets Library:** Biblioteca completa de componentes reutilizáveis
@@ -67,14 +73,19 @@ lib/
 │   ├── core/                    # Framework Base & Infraestrutura
 │   │   ├── base/               # Camadas Base Abstratas
 │   │   │   ├── base.model.dart          # BaseModel<T> com isSync
-│   │   │   ├── base.repository.dart     # BaseRepository<E> CRUD genérico
+│   │   │   ├── base.repository.dart     # BaseRepository<E> → DbHelper
 │   │   │   ├── base.validation.dart     # BaseValidation<E,R> assíncrono
 │   │   │   ├── base.service.dart        # BaseService<E,R,V> orquestração
-│   │   │   └── base.controller.dart     # BaseController<E,R,V,S> UI states
+│   │   │   ├── base.controller.dart     # BaseController<E,R,V,S> UI states
+│   │   │   └── sqlite/
+│   │   │       └── dp.helper.dart       # DbHelper singleton (SQLite)
 │   │   ├── helpers/            # Utilities & Extensions
 │   │   ├── mixins/             # Loader, Messager, UiFeedback
 │   │   ├── repositories/       # Repositories compartilhados
-│   │   ├── services/           # AppClient (DioClient), AuthService
+│   │   ├── services/           # AuthService, BackgroundSync
+│   │   ├── http/               # Comunicação Externa
+│   │   │   ├── app_client.dart          # AppClient singleton (Dio)
+│   │   │   └── interceptors/            # AuthInterceptor, ErrorInterceptor
 │   │   └── theme/              # Design System (AppColors, AppSizes)
 │   ├── shared/                 # Componentes Reutilizáveis
 │   │   ├── widgets/            # Custom Widgets Library
@@ -120,7 +131,7 @@ classDiagram
 
     class BaseRepository {
         <<abstract>>
-        +DioClient dio
+        +DbHelper dbHelper
         +Database db
         +String tableName
         +insert(item) Future
@@ -128,14 +139,16 @@ classDiagram
         +delete(int id) Future
         +findAll() Future
         +findById(int id) Future
-        +syncToServer() Future
-        +syncFromServer() Future
+        +findAllActive() Future
+        +findAllPendingSync() Future
     }
 
     class BaseValidation {
         <<abstract>>
-        +validate(entity) Future
-        +validateAsync(entity) Future
+        +validateFieldCreate(entity) Future
+        +validateRulesCreate(entity) Future
+        +validateFieldUpdate(entity) Future
+        +validateRulesUpdate(entity) Future
     }
 
     class BaseService {
@@ -146,9 +159,10 @@ classDiagram
         +update(entity) Future
         +delete(int id) Future
         +findAll() Future
+        +cloneModelWithId(model, id) E
     }
 
-    class DioClient {
+    class AppClient {
         <<singleton>>
         +Dio instance
         +addInterceptor(Interceptor)
@@ -156,6 +170,23 @@ classDiagram
         +post(String path, data) Future
         +put(String path, data) Future
         +delete(String path) Future
+    }
+
+    class DbHelper {
+        <<singleton>>
+        +Database database
+        +initDB(String filePath) Future
+        +createDB(Database db, int version) Future
+        +getConnection() Future
+    }
+
+    %% Provider Layer (API Communication)
+    class UsuarioProvider {
+        +AppClient client
+        +syncToCloud(Usuario) Future
+        +fetchFromCloud() Future
+        +login(email, senha) Future
+        +logout() Future
     }
 
     class AuthInterceptor {
@@ -244,7 +275,7 @@ classDiagram
         +searchByName(nome) Future
     }
 
-    %% Relacionamentos
+    %% Relacionamentos Corretos
     BaseModel <|-- Usuario
     BaseModel <|-- Cliente
     BaseModel <|-- Tecnico
@@ -255,16 +286,21 @@ classDiagram
     BaseRepository <|-- UsuarioRepository
     BaseRepository <|-- ClienteRepository
     
+    BaseService --> BaseRepository
+    BaseService --> BaseValidation
+    
     OrdemServico --> Cliente
     OrdemServico --> Tecnico
     OrdemServico --> OsItens
     OsItens --> Servico
     
-    DioClient --> AuthInterceptor
-    DioClient --> ErrorModel
-    BaseRepository --> DioClient
-    UsuarioRepository --> Usuario
-    ClienteRepository --> Cliente
+    %% Camada de Persistência (SQLite)
+    BaseRepository --> DbHelper
+    
+    %% Camada de Comunicação (API Externa)
+    UsuarioProvider --> AppClient
+    AppClient --> AuthInterceptor
+    AppClient --> ErrorModel
 ```
 ## 📊 Schema do Banco de Dados SQLite
 
@@ -364,9 +400,34 @@ Para garantir consistência, escalabilidade e manutenibilidade, todos os desenvo
 
 #### **1. Herança das Classes Base**
 * ✅ **Toda entidade** deve herdar de `BaseModel<T>` (controle isSync + timestamps)
-* ✅ **Todo repositório** deve herdar de `BaseRepository<E>` (CRUD offline-first)
-* ✅ **Toda validação** deve herdar de `BaseValidation<E,R>` (validações assíncronas)
-* ✅ **Todo service** deve herdar de `BaseService<E,R,V>` (orquestração de fluxo)
+* ✅ **Todo repositório** deve herdar de `BaseRepository<E>` e usar **DbHelper** para SQLite
+* ✅ **Toda validação** deve herdar de `BaseValidation<E,R>` (validações assíncronas create/update)
+* ✅ **Todo service** deve herdar de `BaseService<E,R,V>` (orquestração validation + repository)
+* ✅ **Providers específicos** devem usar **AppClient** para comunicação com APIs externas
+
+```dart
+// ✅ CORRETO - Repository usando DbHelper
+class ClienteRepository extends BaseRepository<Cliente> {
+  @override
+  String get tableName => 'clientes';
+  
+  // DbHelper já injetado automaticamente pela classe base
+  Future<List<Cliente>> findPendingSync() async {
+    final db = await dbHelper.database; // Usa DbHelper!
+    // ...
+  }
+}
+
+// ✅ CORRETO - Provider usando AppClient
+class ClienteProvider {
+  final AppClient _client = AppClient(); // Usa AppClient para API!
+  
+  Future<bool> syncToCloud(Cliente cliente) async {
+    final response = await _client.post('/clientes', cliente.toMap());
+    // ...
+  }
+}
+```
 
 #### **2. Sistema de Componentes Customizados**
 * ✅ **Utilizar sempre** widgets da biblioteca `app/shared/widgets/`
@@ -450,28 +511,40 @@ Ao criar um novo módulo, seguir sempre esta estrutura:
 ```text
 lib/app/modules/[nome_modulo]/
 ├── data/
-│   ├── [nome].model.dart        # extends BaseModel
-│   └── [nome].repository.dart   # extends BaseRepository
+│   ├── [nome].model.dart        # extends BaseModel<T>
+│   ├── [nome].repository.dart   # extends BaseRepository<E> → DbHelper
+│   └── [nome].provider.dart     # usa AppClient para API externa
 ├── domain/
-│   ├── [nome].validation.dart   # extends BaseValidation  
-│   └── [nome].service.dart      # extends BaseService
+│   ├── [nome].validation.dart   # extends BaseValidation<E,R>  
+│   └── [nome].service.dart      # extends BaseService<E,R,V>
 ├── presentation/
 │   ├── controllers/
-│   │   └── [nome].controller.dart # ChangeNotifier
+│   │   └── [nome].controller.dart # BaseController ou ChangeNotifier
 │   └── pages/
 │       └── [nome]_page.dart      # UI com Custom Widgets
 ```
 
+**Responsabilidades por Camada:**
+- **Model**: Entidade com isSync, timestamps
+- **Repository**: CRUD local via DbHelper (SQLite)
+- **Provider**: Comunicação API via AppClient (HTTP) 
+- **Validation**: Regras de negócio create/update
+- **Service**: Orquestração repository + validation
+- **Controller**: Gestão estado UI
+- **Page**: Interface usando Custom Widgets
+
 ### 🎯 **Checklist de Qualidade:**
 - [ ] Herda das classes Base apropriadas
+- [ ] Repository usa DbHelper (SQLite) - NÃO usar AppClient no Repository
+- [ ] Provider usa AppClient para comunicação externa - NÃO usar DbHelper no Provider  
 - [ ] Usa componentes da biblioteca shared/widgets
-- [ ] Implementa offline-first (SQLite primeiro)
+- [ ] Implementa offline-first (SQLite primeiro via DbHelper)
 - [ ] Segue padrão de injeção de dependência
 - [ ] Usa ErrorModel para tratamento padronizado
 - [ ] Implementa UiFeedbackMixin para mensagens
 - [ ] Remove prints/debugs antes do commit
 - [ ] Testa funcionalidade offline
-- [ ] Valida sincronização em background
+- [ ] Valida sincronização em background via Provider → AppClient
 
 ## 🛠️ Stack Tecnológico & Dependências
 
@@ -630,35 +703,44 @@ components:
         created_at: {type: string, format: date-time}
 ```
 
-### 🔄 **Fluxo de Sincronização Offline-First**
+### 🔄 **Fluxo de Sincronização Offline-First Correto**
 
 ```mermaid
 sequenceDiagram
     participant App as Mobile App
-    participant SQLite as SQLite Local
-    participant API as REST API
-    participant Supabase as Supabase
+    participant BaseService as BaseService
+    participant BaseRepository as BaseRepository
+    participant DbHelper as DbHelper (SQLite)
+    participant Provider as UsuarioProvider
+    participant AppClient as AppClient
+    participant Supabase as Supabase API
 
-    Note over App, Supabase: 1. Inicialização & Login
-    App->>Supabase: Login (email/password)
-    Supabase-->>App: JWT Token
-    App->>SQLite: Store token securely
+    Note over App, DbHelper: 1. Operação Offline-First (CRUD Local)
+    App->>BaseService: create(usuario)
+    BaseService->>BaseRepository: insert(usuario)
+    BaseRepository->>DbHelper: INSERT INTO usuarios (is_sync=0)
+    DbHelper-->>BaseRepository: ID local gerado
+    BaseRepository-->>BaseService: Usuario salvo localmente
+    BaseService-->>App: Operação concluída offline
     
-    Note over App, SQLite: 2. Operação Offline (CRUD)
-    App->>SQLite: CREATE/UPDATE/DELETE (is_sync=0)
-    SQLite-->>App: Operação local concluída
-    
-    Note over App, API: 3. Sincronização Background
+    Note over Provider, Supabase: 2. Sincronização Background (Provider → AppClient)
     loop A cada 5 minutos
-        App->>SQLite: SELECT WHERE is_sync=0
-        SQLite-->>App: Registros pendentes
-        App->>API: POST/PUT com JWT header
-        API-->>App: Success/Error response
-        App->>SQLite: UPDATE is_sync=1 (se success)
+        Provider->>BaseRepository: findAllPendingSync()
+        BaseRepository->>DbHelper: SELECT WHERE is_sync=0
+        DbHelper-->>Provider: Registros pendentes
+        Provider->>AppClient: POST /usuarios com JWT
+        AppClient->>Supabase: HTTP Request
+        Supabase-->>AppClient: Success/Error response
+        AppClient-->>Provider: Response
+        Provider->>BaseRepository: update(is_sync=1)
+        BaseRepository->>DbHelper: UPDATE is_sync=1
     end
     
-    Note over App, API: 4. Download de atualizações
-    App->>API: GET /sync?last_sync=timestamp
-    API-->>App: Novos registros desde último sync
-    App->>SQLite: INSERT/UPDATE registros remotos
+    Note over Provider, Supabase: 3. Download de atualizações
+    Provider->>AppClient: GET /usuarios?last_sync=timestamp
+    AppClient->>Supabase: HTTP Request  
+    Supabase-->>AppClient: Novos registros
+    AppClient-->>Provider: Lista atualizada
+    Provider->>BaseRepository: insertOrUpdate(registros)
+    BaseRepository->>DbHelper: INSERT/UPDATE registros
 ```	  
