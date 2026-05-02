@@ -14,8 +14,9 @@ import 'package:serviceflow/app/core/base/base.repository.dart';
 /// - Coordenação Repository ↔ Provider
 /// - Resolução de conflitos
 /// - Persistência de estado de sync
-abstract class BaseSchedule<E extends BaseModel, P extends BaseProvider<E>> {
-  final BaseRepository<E> repository;
+abstract class BaseSchedule<E extends BaseModel, R extends BaseRepository<E>,
+    P extends BaseProvider<E>> {
+  final R repository;
   final P provider;
 
   Timer? _syncTimer;

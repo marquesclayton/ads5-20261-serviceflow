@@ -115,7 +115,7 @@ class MinhaFeatureProvider extends BaseProvider<MinhaFeature> {
 ### Passo 4: Criar o Schedule
 ```dart
 // lib/app/modules/[feature]/[feature].schedule.dart
-class MinhaFeatureSchedule extends BaseSchedule<MinhaFeature, MinhaFeatureProvider> {
+class MinhaFeatureSchedule extends BaseSchedule<MinhaFeature, MinhaFeatureRepository, MinhaFeatureProvider> {
   static final MinhaFeatureSchedule _instance = MinhaFeatureSchedule._init();
   factory MinhaFeatureSchedule() => _instance;
 

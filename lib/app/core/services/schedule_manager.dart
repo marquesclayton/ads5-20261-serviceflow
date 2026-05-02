@@ -1,6 +1,3 @@
-import 'package:serviceflow/app/core/base/base.schedule.dart';
-import 'package:serviceflow/app/core/base/base.model.dart';
-import 'package:serviceflow/app/core/base/base.provider.dart';
 import 'package:serviceflow/app/modules/usuarios/usuario.schedule.dart';
 
 /// Gerenciador central de schedules
@@ -108,8 +105,7 @@ class ScheduleManager {
   }
 
   /// Registrar schedule customizado
-  void registerSchedule(
-      BaseSchedule<BaseModel, BaseProvider<BaseModel>> schedule) {
+  void registerSchedule(dynamic schedule) {
     final existing = _schedules
         .where((s) => s.featureName == schedule.featureName)
         .firstOrNull;

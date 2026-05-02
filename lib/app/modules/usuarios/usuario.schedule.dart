@@ -10,7 +10,8 @@ import 'package:serviceflow/app/modules/usuarios/usuario.provider.dart';
 /// - Coordenar sincronização entre UsuarioRepository e UsuarioProvider
 /// - Configurações específicas de timing e frequência
 /// - Lógicas especiais de usuários (cache de login, etc.)
-class UsuarioSchedule extends BaseSchedule<Usuario, UsuarioProvider> {
+class UsuarioSchedule
+    extends BaseSchedule<Usuario, UsuarioRepository, UsuarioProvider> {
   // Singleton para manter compatibilidade com código existente
   static final UsuarioSchedule _instance = UsuarioSchedule._init();
   factory UsuarioSchedule() => _instance;
@@ -29,8 +30,7 @@ class UsuarioSchedule extends BaseSchedule<Usuario, UsuarioProvider> {
   /// Sincronizar dados do usuário logado prioritariamente
   Future<bool> syncCurrentUser(String email) async {
     try {
-      final currentUser =
-          await (repository as UsuarioRepository).findByEmail(email);
+      final currentUser = await repository.findByEmail(email);
       if (currentUser != null && currentUser.isSync == 0) {
         return await provider.syncToCloud(currentUser);
       }

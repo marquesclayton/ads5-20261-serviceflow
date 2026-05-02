@@ -16,7 +16,7 @@ O projeto implementa uma **Arquitetura Offline-First com Camadas Base**, focada 
 * **BaseService<E,R,V>:** Orquestração validation → repository com fluxo assíncrono de negócio
 * **BaseController<E,R,V,S>:** Gestão de estados UI (extends `StatefulWidget`) com loading/error
 * **BaseProvider<E>:** Abstração genérica para comunicação com APIs externas via **AppClient**
-* **BaseSchedule<E,P>:** Abstração genérica para sincronização automática background por feature
+* **BaseSchedule<E,R,P>:** Abstração genérica para sincronização automática background por feature
 
 ### 🌐 Camada de Comunicação Externa
 * **AppClient:** HTTP Client singleton baseado no Dio com interceptors automáticos para APIs externas
@@ -88,7 +88,7 @@ lib/
 │   │   │   ├── base.service.dart        # BaseService<E,R,V> orquestração
 │   │   │   ├── base.controller.dart     # BaseController<E,R,V,S> UI states
 │   │   │   ├── base.provider.dart       # BaseProvider<E> → AppClient
-│   │   │   ├── base.schedule.dart       # BaseSchedule<E,P> background sync
+│   │   │   ├── base.schedule.dart       # BaseSchedule<E,R,P> background sync
 │   │   │   └── sqlite/
 │   │   │       └── dp.helper.dart       # DbHelper singleton (SQLite)
 │   │   ├── helpers/            # Utilities & Extensions
@@ -578,7 +578,7 @@ lib/app/modules/[nome_modulo]/
 │   ├── [nome].model.dart        # extends BaseModel<T>
 │   ├── [nome].repository.dart   # extends BaseRepository<E> → DbHelper
 │   ├── [nome].provider.dart     # extends BaseProvider<E> → AppClient  
-│   └── [nome].schedule.dart     # extends BaseSchedule<E,P> (background sync)
+│   └── [nome].schedule.dart     # extends BaseSchedule<E,R,P> (background sync)
 ├── domain/
 │   ├── [nome].validation.dart   # extends BaseValidation<E,R>  
 │   └── [nome].service.dart      # extends BaseService<E,R,V>

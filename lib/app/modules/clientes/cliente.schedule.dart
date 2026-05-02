@@ -5,7 +5,8 @@ import 'cliente.provider.dart';
 
 /// Schedule específico para sincronização de clientes
 /// Exemplo de implementação seguindo BaseSchedule
-class ClienteSchedule extends BaseSchedule<Cliente, ClienteProvider> {
+class ClienteSchedule
+    extends BaseSchedule<Cliente, ClienteRepository, ClienteProvider> {
   // Singleton para consistência
   static final ClienteSchedule _instance = ClienteSchedule._init();
   factory ClienteSchedule() => _instance;
