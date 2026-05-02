@@ -840,6 +840,7 @@ components:
 - `lib/app/modules/usuarios/` - Exemplo completo implementado
 - `GUIA_IMPLEMENTACAO.md` - Tutorial step-by-step
 - `lib/main.dart` - Bootstrap e inicialização do sistema
+```yaml
       parameters:
         - name: last_sync
           in: query
