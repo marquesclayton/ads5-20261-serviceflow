@@ -3,4 +3,7 @@ class AppConfig {
   static const String supabaseKey =
       "sb_publishable_p5hlnW6vlJSb-YOBoAoU4Q_q3GGCCOM";
   static const String groupId = "SF-GP-01";
+
+  // Configuração de ambiente
+  static const bool isDevelopment = true; // Alterar para false em produção
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:serviceflow/app/core/helpers/app.config.dart';
+import 'package:serviceflow/app/core/helpers/database_helper.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app_widget.dart';
@@ -9,8 +10,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 2. Exemplo: Aqui deve-se carregar o Banco de Dados ou as Configurações
-  // await DatabaseHelper.instance.init();
-  initializeSupabase();
+  await DbHelper.instance.database;
+  
+  // 3. Inicializar Supabase ANTES do app rodar
+  await initializeSupabase();
 
   runApp(const AppEntry());
 }

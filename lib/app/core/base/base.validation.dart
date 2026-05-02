@@ -13,30 +13,32 @@ abstract class BaseValidation<E extends BaseModel,
     }
   }
 
-  void validateFieldCreate(E model) {
+  Future<void> validateFieldCreate(E model) async {
     validateFields(model);
     if (model.id != null && model.id! > 0) {
       throw Exception(
           "O ID não pode ser informado ou deve ser zero para criação");
-    } // Validações específicas para criação (se necessário)
+    }
+    // Validações específicas para criação (se necessário)
   }
 
-  void validateFieldUpdate(E model) {
+  Future<void> validateFieldUpdate(E model) async {
     validateFields(model);
     if (model.id == null || model.id! <= 0) {
       throw Exception("O ID deve ser maior que zero");
-    } // Validações específicas para atualização (se necessário)
+    }
+    // Validações específicas para atualização (se necessário)
   }
 
-  void validateRulesCreate(E model) {
-    // Regras de negócio específicas para criação (se necessário)
+  Future<void> validateRulesCreate(E model) async {
+    // Regras de negócio específicas para criação (implementar nas classes filhas)
   }
 
-  void validateRulesUpdate(E model) {
-    // Regras de negócio específicas para atualização (se necessário)
+  Future<void> validateRulesUpdate(E model) async {
+    // Regras de negócio específicas para atualização (implementar nas classes filhas)
   }
 
-  void validateRulesDelete(E model) {
-    // Regras de negócio específicas para exclusão (se necessário)
+  Future<void> validateRulesDelete(E model) async {
+    // Regras de negócio específicas para exclusão (implementar nas classes filhas)
   }
 }

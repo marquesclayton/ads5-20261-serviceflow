@@ -19,5 +19,7 @@ dependencies:
   supabase_flutter: ^2.12.2
   supabase: ^2.10.4
 flutter:
+  uses-material-design: true
   assets:
     - assets/images/
+    - assets/sql/create_tables.sql

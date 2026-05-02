@@ -9,35 +9,41 @@ abstract class BaseService<E extends BaseModel, R extends BaseRepository<E>,
 
   BaseService(this.validation, this.repository);
 
-  E cloneModelWthiId(E model, int id);
+  E cloneModelWithId(E model, int id);
 
   Future<E> create(E model) async {
-    validation.validateFieldCreate(model);
-    validation.validateRulesCreate(model);
+    await validation.validateFieldCreate(model);
+    await validation.validateRulesCreate(model);
 
     beforeCreate(model);
 
-    return repository.insert(model).then((id) {
-      E savedModel = cloneModelWthiId(model, id);
-      afterCreate(savedModel);
-      return savedModel;
-    });
+    final id = await repository.insert(model);
+    E savedModel = cloneModelWithId(model, id);
+    afterCreate(savedModel);
+    return savedModel;
   }
 
-  Future<E> update(E model) {
-    validation.validateFieldUpdate(model);
-    validation.validateRulesUpdate(model);
+  Future<E> update(E model) async {
+    await validation.validateFieldUpdate(model);
+    await validation.validateRulesUpdate(model);
 
     beforeUpdate(model);
 
-    return repository.update(model).then((_) {
-      afterUpdate(model);
-      return model;
-    });
+    await repository.update(model);
+    afterUpdate(model);
+    return model;
   }
 
   Future<List<E>> findAll() {
     return repository.findAll();
+  }
+
+  Future<List<E>> findAllActive() {
+    return repository.findAllActive();
+  }
+
+  Future<List<E>> findAllInactive() {
+    return repository.findAllInactive();
   }
 
   Future<E?> findById(int id) {
@@ -48,6 +54,31 @@ abstract class BaseService<E extends BaseModel, R extends BaseRepository<E>,
         throw Exception("Registro com ID $id não encontrado");
       }
     });
+  }
+
+  Future<void> delete(int id) async {
+    final model = await findById(id);
+    if (model != null) {
+      beforeDelete(model);
+      await repository.delete(id);
+      afterDelete(model);
+    }
+  }
+
+  Future<void> softDelete(int id) async {
+    final model = await findById(id);
+    if (model != null) {
+      beforeDelete(model);
+      await repository.softDelete(id);
+      afterDelete(model);
+    }
+  }
+
+  Future<void> reactivate(int id) async {
+    final model = await findById(id);
+    if (model != null) {
+      await repository.reactivate(id);
+    }
   }
 
   void beforeCreate(E model) {}

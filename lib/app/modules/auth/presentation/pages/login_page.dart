@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:serviceflow/app/core/mixins/loader.mixin.dart';
 import 'package:serviceflow/app/core/mixins/messages.mixin.dart';
-import '../../../../shared/widgets/custom_text_field.dart';
-// Importe o novo widget do logo
-import '../../../../shared/widgets/app_logo.dart';
+import 'package:serviceflow/app/shared/widgets/widgets.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -28,6 +26,32 @@ class _LoginPageState extends State<LoginPage> with MessagesMixin, LoaderMixin {
     emailController.dispose();
     senhaController.dispose();
     super.dispose();
+  }
+
+  void _realizarLogin() {
+    // Validação básica dos campos
+    if (emailController.text.trim().isEmpty) {
+      showError(context, "Por favor, informe o e-mail");
+      return;
+    }
+
+    if (senhaController.text.trim().isEmpty) {
+      showError(context, "Por favor, informe a senha");
+      return;
+    }
+
+    // Aqui você pode implementar a lógica de autenticação
+    // Por exemplo: chamar um service, validar no Supabase, etc.
+    showLoading(context);
+
+    // Simulação de delay de autenticação (remover em produção)
+    Future.delayed(const Duration(seconds: 2), () {
+      hideLoading(context);
+      // TODO: Implementar lógica real de login
+      // Se login for bem-sucedido, navegar para tela principal
+      Navigator.pushReplacementNamed(context, '/home');
+      showSuccess(context, "Login realizado com sucesso!");
+    });
   }
 
   @override
@@ -59,13 +83,10 @@ class _LoginPageState extends State<LoginPage> with MessagesMixin, LoaderMixin {
                   isPassword: true,
                   controller: senhaController),
               const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () => showSuccess(context, "message"),
-                child: const Text("Entrar"),
-              ),
-              ElevatedButton(
-                onPressed: () => showLoading(context),
-                child: const Text("Inicia o Loader"),
+              CustomPrimaryButton(
+                text: 'Entrar',
+                icon: AppIcons.login,
+                onPressed: _realizarLogin,
               ),
             ],
           ),

@@ -20,13 +20,12 @@ mixin LoaderMixin {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
+              child: const Column(
+                mainAxisSize: MainAxisSize.min, // Usa apenas o espaço necessário
                 children: [
-                  const CircularProgressIndicator(),
-                  ElevatedButton(
-                    onPressed: () => hideLoading(context),
-                    child: const Text("Para o Loader"),
-                  ),
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text("Carregando...", style: TextStyle(fontSize: 16)),
                 ],
               ),
             ),

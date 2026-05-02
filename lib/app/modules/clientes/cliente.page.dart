@@ -6,7 +6,7 @@ import 'package:serviceflow/app/modules/clientes/cliente.model.dart';
 import 'package:serviceflow/app/modules/clientes/cliente.service.dart';
 import 'package:serviceflow/app/modules/clientes/cliente.validation.dart';
 
-import '../../shared/widgets/custom_text_field.dart';
+import '../../shared/widgets/widgets.dart';
 
 class ClientePage extends BaseController<Cliente, ClienteRepository,
     ClienteValidation, ClienteService> {
@@ -69,7 +69,7 @@ class _ClientePageState extends StatelessWidget {
           cliente.id != null ? 'Editar Cliente' : 'Novo Cliente',
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(AppIcons.back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -82,7 +82,7 @@ class _ClientePageState extends StatelessWidget {
               CustomTextField(
                 controller: nomeController,
                 label: 'Nome',
-                prefixIcon: Icons.person,
+                prefixIcon: AppIcons.person,
                 validator: (value) {
                   if (value?.isEmpty ?? true) {
                     return 'Nome é obrigatório';
@@ -94,14 +94,14 @@ class _ClientePageState extends StatelessWidget {
               CustomTextField(
                 controller: emailController,
                 label: 'Email',
-                prefixIcon: Icons.email,
+                prefixIcon: AppIcons.email,
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
               CustomTextField(
                 controller: telefonController,
                 label: 'Telefone',
-                prefixIcon: Icons.phone,
+                prefixIcon: AppIcons.phone,
                 keyboardType: TextInputType.phone,
                 validator: (value) {
                   if (value?.isEmpty ?? true) {
@@ -114,7 +114,7 @@ class _ClientePageState extends StatelessWidget {
               CustomTextField(
                 controller: enderecoController,
                 label: 'Endereço',
-                prefixIcon: Icons.location_on,
+                prefixIcon: AppIcons.location,
                 validator: (value) {
                   if (value?.isEmpty ?? true) {
                     return 'Endereço é obrigatório';
@@ -126,7 +126,7 @@ class _ClientePageState extends StatelessWidget {
               CustomTextField(
                 controller: cidadeController,
                 label: 'Cidade',
-                prefixIcon: Icons.location_city,
+                prefixIcon: AppIcons.location,
                 validator: (value) {
                   if (value?.isEmpty ?? true) {
                     return 'Cidade é obrigatória';
@@ -138,7 +138,7 @@ class _ClientePageState extends StatelessWidget {
               CustomTextField(
                 controller: estadoController,
                 label: 'Estado',
-                prefixIcon: Icons.flag,
+                prefixIcon: AppIcons.map,
                 maxLength: 2,
                 validator: (value) {
                   if (value?.isEmpty ?? true) {
@@ -151,7 +151,7 @@ class _ClientePageState extends StatelessWidget {
               CustomTextField(
                 controller: cepController,
                 label: 'CEP',
-                prefixIcon: Icons.location_on,
+                prefixIcon: AppIcons.location,
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value?.isEmpty ?? true) {
@@ -161,20 +161,12 @@ class _ClientePageState extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 16),
-              ElevatedButton(
+              CustomPrimaryButton(
+                text: cliente.id != null ? 'Atualizar' : 'Salvar',
+                icon: AppIcons.save,
                 onPressed: () {
                   // Lógica para salvar o cliente
                 },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Text(
-                  cliente.id != null ? 'Atualizar' : 'Salvar',
-                  style: const TextStyle(fontSize: 16),
-                ),
               ),
             ],
           ),

@@ -25,12 +25,13 @@ class ClienteValidation extends BaseValidation<Cliente, ClienteRepository> {
   }
 
   @override
-  void validateRulesCreate(Cliente model) async {
-    // Regras de negócio específicas para criação (se necessário)
+  Future<void> validateRulesCreate(Cliente model) async {
+    // Regras de negócio específicas para criação
     bool emailExists = await repository.existsByEmail(model.email);
     if (emailExists) {
       throw Exception("Já existe um cliente com este email");
     }
+
     bool nomeExists = await repository.existsByNome(model.nome);
     if (nomeExists) {
       throw Exception("Já existe um cliente com este nome");
@@ -38,11 +39,12 @@ class ClienteValidation extends BaseValidation<Cliente, ClienteRepository> {
   }
 
   @override
-  void validateRulesUpdate(Cliente model) async {
-    // Regras de negócio específicas para atualização (se necessário)
+  Future<void> validateRulesUpdate(Cliente model) async {
+    // Regras de negócio específicas para atualização
     if (await repository.existsByEmailWithoutId(model.email, model.id!)) {
       throw Exception("Já existe um cliente com este email");
     }
+
     if (await repository.existsByNomeWithoutId(model.nome, model.id!)) {
       throw Exception("Já existe um cliente com este nome");
     }
