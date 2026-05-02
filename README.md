@@ -255,9 +255,10 @@ classDiagram
     BaseRepository <|-- UsuarioRepository
     BaseRepository <|-- ClienteRepository
     
-    OrdemServico }o-- Cliente : pertence_a
-    OrdemServico }o-- Tecnico : atribuida_a
-    OsItens }o-- Servico : refere_a
+    OrdemServico }o-- Cliente : pertence
+    OrdemServico }o-- Tecnico : atribuida
+    OrdemServico ||--o{ OsItens : contem
+    OsItens }o-- Servico : referencia
     
     DioClient *-- AuthInterceptor : utiliza
     DioClient ..> ErrorModel : mapeia_erro
