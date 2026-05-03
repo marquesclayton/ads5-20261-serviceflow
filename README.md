@@ -11,12 +11,18 @@ O projeto implementa uma **Arquitetura Offline-First com Camadas Base**, focada 
 
 ### 📦 Camadas Base (Core Framework)
 * **BaseModel<T>:** Classe abstrata com `id`, `isSync`, `createdAt`, métodos de conversão e controle de sincronização
-* **BaseRepository<E>:** Abstração genérica para operações CRUD offline-first usando **DbHelper** (SQLite) como fonte primária
-* **BaseValidation<E,R>:** Validações assíncronas type-safe com regras de negócio específicas para create/update
-* **BaseService<E,R,V>:** Orquestração validation → repository com fluxo assíncrono de negócio
-* **BaseController<E,R,V,S>:** Gestão de estados UI (extends `StatefulWidget`) com loading/error
-* **BaseProvider<E>:** Abstração genérica para comunicação com APIs externas via **AppClient** com logging centralizado
-* **BaseSchedule<E,R,P>:** Abstração genérica para sincronização automática background por feature
+* **BaseRepository<E extends BaseModel>:** Abstração genérica para operações CRUD offline-first usando **DbHelper** (SQLite) como fonte primária
+* **BaseValidation<E extends BaseModel, R extends BaseRepository<E>>:** Validações assíncronas type-safe com regras de negócio específicas para create/update
+* **BaseService<E extends BaseModel, R extends BaseRepository<E>, V extends BaseValidation<E,R>>:** Orquestração validation → repository com fluxo assíncrono de negócio
+* **BaseController<E extends BaseModel, R extends BaseRepository<E>, V extends BaseValidation<E,R>, S extends BaseService<E,R,V>>:** Widget abstrato com **LoaderMixin + MessagesMixin** integrados para operações centralizadas UI
+* **BaseProvider<E extends BaseModel>:** Abstração genérica para comunicação com APIs externas via **AppClient** com logging centralizado
+* **BaseSchedule<E extends BaseModel, R extends BaseRepository<E>, P extends BaseProvider<E>>:** Abstração genérica para sincronização automática background por feature
+
+### 🎭 Sistema de Mixins Centralizados
+* **LoaderMixin:** Controle automático de loading overlay com show/hide inteligente
+* **MessagesMixin:** Sistema de mensagens com durações específicas (sucesso: 3s, erro: manual, aviso: 4s)
+* **BaseController:** Operações centralizadas (`executeOperation`, `executeListOperation`, `executeCrudOperation`) com fluxo automático loader→service→mensagem
+* **Exception Convergence:** Todas as exceções convergem automaticamente para mensagens amigáveis ao usuário
 
 ### 🌐 Camada de Comunicação Externa
 * **AppClient:** HTTP Client singleton baseado no Dio com interceptors automáticos para APIs externas
@@ -62,13 +68,15 @@ O projeto implementa uma **Arquitetura Offline-First com Camadas Base**, focada 
 
 ## 📝 Módulos Implementados & Em Desenvolvimento
 ### ✅ **Funcionais & Testados:**
-1.  **Clientes:** CRUD completo com persistência offline
+1.  **Clientes:** CRUD completo com persistência offline + **fluxo centralizado de mixins**
 2.  **Usuários:** Sistema completo com BaseProvider + BaseSchedule implementados
 3.  **Autenticação:** Login/logout com token management
 4.  **Laboratório:** Página de testes de hardware (câmera, assinatura, conectividade)
 5.  **Dashboard:** Interface principal com navegação modular e componentes customizados
 6.  **Sistema de Sincronização:** BaseProvider + BaseSchedule + ScheduleManager funcionais
 7.  **Sistema de Logging:** LogService centralizado com persistência SQLite e tratamento de erros padronizado
+8.  **Sistema de Mixins:** LoaderMixin + MessagesMixin + BaseController com operações centralizadas funcionais
+9.  **Fluxo de Exceções:** Convergência automática de todas as exceções para mensagens de usuário amigáveis
 
 ### 🚧 **Em Desenvolvimento (EmDesenvolvimentoPage):**
 1.  **Ordens de Serviço:** Interface de gestão de O.S. com evidências
@@ -96,7 +104,7 @@ lib/
 │   │   ├── helpers/            # Utilities & Extensions
 │   │   │   ├── database_helper.dart     # DbHelper singleton (SQLite)
 │   │   │   └── app.config.dart          # Configurações da aplicação
-│   │   ├── mixins/             # Loader, Messager, UiFeedback
+│   │   ├── mixins/             # LoaderMixin, MessagesMixin com durações específicas
 │   │   ├── repositories/       # Repositories compartilhados
 │   │   ├── services/           # AuthService, ScheduleManager, SyncSystemInitializer
 │   │   ├── logging/            # Sistema de Logging Centralizado
@@ -171,15 +179,25 @@ classDiagram
         +validateRulesUpdate(entity) Future
     }
 
-    class BaseService {
+    class BaseController {
         <<abstract>>
-        +BaseRepository repository
-        +BaseValidation validation
-        +create(entity) Future
-        +update(entity) Future
-        +delete(int id) Future
-        +findAll() Future
-        +cloneModelWithId(model, id) E
+        +E extends BaseModel
+        +R extends BaseRepository<E>
+        +V extends BaseValidation<E,R>
+        +S extends BaseService<E,R,V>
+        +S service
+        +E? model
+        +buildPage(BuildContext, S) Widget
+        +executeOperation<T>() Future
+        +executeListOperation<T>() Future
+        +executeCrudOperation() Future
+        +_handleException() void
+        +showLoading() void
+        +hideLoading() void
+        +showSuccess() void
+        +showError() void
+        +showWarning() void
+        +showConfirmation() Future
     }
 
     class BaseProvider {

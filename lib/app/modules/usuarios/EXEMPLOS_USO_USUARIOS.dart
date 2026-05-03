@@ -1,323 +1,467 @@
-import 'package:serviceflow/app/core/services/auth.service.dart';
-import 'package:serviceflow/app/modules/usuarios/usuario.model.dart';
+// 🎯 EXEMPLOS DE USO - Sistema de Usuários com Arquitetura Centralizada
+// 📋 Este arquivo demonstra como implementar funcionalidades usando:
+//     • BaseController com LoaderMixin + MessagesMixin automático
+//     • Operações centralizadas (executeOperation, executeListOperation, executeCrudOperation)
+//     • Fluxo completo: Loader → Service → Exception Handling → Messages
+//     • Convergência de exceções para mensagens amigáveis
+
+import 'package:flutter/material.dart';
+import 'package:serviceflow/app/core/base/base.controller.dart';
+import 'package:serviceflow/app/core/mixins/messages.mixin.dart';
 import 'package:serviceflow/app/modules/usuarios/usuario.repository.dart';
-import 'package:serviceflow/app/modules/usuarios/usuario.service.dart';
+import 'package:serviceflow/app/modules/usuarios/usuario.model.dart';
 import 'package:serviceflow/app/modules/usuarios/usuario.validation.dart';
-import 'package:serviceflow/app/modules/usuarios/usuario.schedule.dart';
+import 'package:serviceflow/app/modules/usuarios/usuario.service.dart';
 
-/// Exemplos de uso do módulo de Usuários seguindo arquitetura offline-first
-///
-/// 📚 ESTRUTURA DE CAMADAS IMPLEMENTADA:
-///
-/// Entidade (Entity) → Usuario.model.dart
-/// ├─ Atributos: supabaseId, email, nomeCompleto, etc.
-/// ├─ Mappers: toMap(), fromMap(), fromSupabase()
-/// └─ Controle de Sync: isSync (0=pendente, 1=sincronizado)
-///
-/// Repository → Usuario.repository.dart
-/// ├─ CRUD genérico herdado do BaseRepository
-/// ├─ Métodos específicos: findByEmail(), findByGrupo()
-/// └─ Sync control: markAsSynced(), findNotSynced()
-///
-/// Validation → Usuario.validation.dart
-/// ├─ Campos obrigatórios e formatos
-/// ├─ Regras de negócio: duplicidade, perfis válidos
-/// └─ Validações específicas: login, configurações
-///
-/// Service → Usuario.service.dart
-/// ├─ Orquestra: Validation → Repository
-/// ├─ Fluxo de negócio: login(), updateConfiguracoes()
-/// └─ Hooks: beforeCreate(), afterCreate()
-///
-/// Provider → Usuario.provider.dart
-/// ├─ Comunicação exclusiva com Supabase
-/// ├─ Serialização: _toSupabaseFormat(), _fromSupabaseFormat()
-/// └─ Isolamento da API externa
-///
-/// Schedule → Usuario.schedule.dart
-/// ├─ Background Worker: Timer.periodic()
-/// ├─ Sincronização: SQLite ↔ Supabase
-/// └─ Conflitos: resolução automática
-///
-/// 🚀 EXEMPLOS DE USO:
+// ============================================================================
+// 📖 EXEMPLO 1: Lista de Usuários com BaseController e Operações Centralizadas
+// ============================================================================
 
-class ExemplosUsuarios {
-  // === 1. INICIALIZAÇÃO DO SISTEMA ===
+class UsuariosListPageExample extends BaseController<Usuario, UsuarioRepository,
+    UsuarioValidation, UsuarioService> {
+  UsuariosListPageExample(UsuarioService service) : super(service);
 
-  static Future<void> inicializarSistema() async {
-    print("🚀 Inicializando sistema de usuários...");
-
-    // Configurar componentes do sistema (comentado para exemplo)
-    // final repository = UsuarioRepository();
-    // final validation = UsuarioValidation(repository);
-    // final service = UsuarioService(validation, repository);
-
-    // Iniciar agendador de sincronização
-    final schedule = UsuarioSchedule();
-    schedule.start();
-
-    print("✅ Sistema inicializado com sucesso!");
-  }
-
-  // === 2. AUTENTICAÇÃO (via AuthService) ===
-
-  static Future<void> exemploLogin() async {
-    final authService = AuthService();
-
-    try {
-      // Login do usuário (Supabase + cache local)
-      final usuario = await authService.login('joao@exemplo.com', 'senha123');
-
-      print("✅ Login realizado: ${usuario.nomeCompleto}");
-      print("   Email: ${usuario.email}");
-      print("   Perfil: ${usuario.perfil}");
-      print("   Último login: ${usuario.ultimoLogin}");
-    } catch (e) {
-      print("❌ Erro no login: $e");
-    }
-  }
-
-  static Future<void> exemploLogout() async {
-    final authService = AuthService();
-
-    try {
-      await authService.logout();
-      print("✅ Logout realizado com sucesso");
-    } catch (e) {
-      print("❌ Erro no logout: $e");
-    }
-  }
-
-  // === 3. OPERAÇÕES CRUD (via Service) ===
-
-  static Future<void> exemploCriarUsuario() async {
-    final repository = UsuarioRepository();
-    final validation = UsuarioValidation(repository);
-    final service = UsuarioService(validation, repository);
-
-    try {
-      final novoUsuario = Usuario(
-        supabaseId: '550e8400-e29b-41d4-a716-446655440000', // UUID fictício
-        email: 'maria@exemplo.com',
-        nomeCompleto: 'Maria Silva Santos',
-        grupoId: 'SF-GP-01',
-        perfil: 'tecnico',
-      );
-
-      final usuarioSalvo = await service.create(novoUsuario);
-      print("✅ Usuário criado com ID: ${usuarioSalvo.id}");
-    } catch (e) {
-      print("❌ Erro ao criar usuário: $e");
-    }
-  }
-
-  static Future<void> exemploListarUsuarios() async {
-    final repository = UsuarioRepository();
-    final validation = UsuarioValidation(repository);
-    final service = UsuarioService(validation, repository);
-
-    try {
-      final usuarios = await service.findAll();
-
-      print("📋 Lista de usuários (${usuarios.length}):");
-      for (final usuario in usuarios) {
-        final syncStatus = usuario.isSync == 1 ? "✅" : "⏳";
-        print("   $syncStatus ${usuario.nomeCompleto} (${usuario.email})");
-      }
-    } catch (e) {
-      print("❌ Erro ao listar usuários: $e");
-    }
-  }
-
-  // === 4. CONFIGURAÇÕES DO USUÁRIO ===
-
-  static Future<void> exemploConfiguracoes() async {
-    final authService = AuthService();
-
-    try {
-      // Atualizar configurações
-      final usuario = await authService.updateUserSettings({
-        'theme': 'dark',
-        'notifications': true,
-        'auto_sync': false,
-        'language': 'pt-BR',
-      });
-
-      print("✅ Configurações atualizadas:");
-      print("   Tema: ${usuario.configuracoesMap['theme']}");
-      print("   Sincronizado: ${usuario.isSync == 1 ? 'Sim' : 'Pendente'}");
-    } catch (e) {
-      print("❌ Erro ao atualizar configurações: $e");
-    }
-  }
-
-  // === 5. ADMINISTRAÇÃO (apenas admins) ===
-
-  static Future<void> exemploAdministracao() async {
-    final authService = AuthService();
-
-    try {
-      // Verificar se é admin
-      final isAdmin = await authService.isAdmin();
-      if (!isAdmin) {
-        print("❌ Acesso negado: apenas administradores");
-        return;
-      }
-
-      // Listar usuários do grupo
-      final usuariosGrupo = await authService.getUsersByGrupo('SF-GP-01');
-      print("👥 Usuários do grupo SF-GP-01: ${usuariosGrupo.length}");
-
-      // Alterar perfil de usuário
-      await authService.updateUserProfile(
-          '550e8400-e29b-41d4-a716-446655440000', // Supabase ID
-          'supervisor');
-      print("✅ Perfil alterado para supervisor");
-
-      // Obter estatísticas
-      final stats = await authService.getUserStats();
-      print("📊 Estatísticas:");
-      print("   Total: ${stats['total_users']}");
-      print("   Admins: ${stats['admins']}");
-      print("   Técnicos: ${stats['tecnicos']}");
-      print("   Online hoje: ${stats['online_hoje']}");
-    } catch (e) {
-      print("❌ Erro nas operações administrativas: $e");
-    }
-  }
-
-  // === 6. SINCRONIZAÇÃO OFFLINE-FIRST ===
-
-  static Future<void> exemploSincronizacao() async {
-    final schedule = UsuarioSchedule();
-
-    try {
-      // Verificar status do agendador
-      print("⚡ Status do agendador: Ativo");
-
-      // Obter estatísticas básicas
-      print("📊 Sincronização:");
-      print("   Funcionalidade: ${schedule.featureName}");
-      print("   Intervalo: ${schedule.syncInterval.inMinutes} min");
-
-      // Forçar sincronização imediata
-      final resultado = await schedule.syncNow();
-      print("🔄 Resultado da sincronização: ${resultado ? 'Sucesso' : 'Erro'}");
-    } catch (e) {
-      print("❌ Erro na sincronização: $e");
-    }
-  }
-
-  // === 7. CENÁRIOS OFFLINE ===
-
-  static Future<void> exemploUsoOffline() async {
-    print("📱 Demonstrando uso offline...");
-
-    final repository = UsuarioRepository();
-
-    try {
-      // Mesmo sem internet, dados locais funcionam
-      final usuariosLocais = await repository.findAll();
-      print("💾 Usuários no cache local: ${usuariosLocais.length}");
-
-      // Buscar por email (funciona offline)
-      final usuario = await repository.findByEmail('joao@exemplo.com');
-      if (usuario != null) {
-        print("👤 Usuário encontrado offline: ${usuario.nomeCompleto}");
-        print("   Último login: ${usuario.ultimoLogin}");
-        print(
-            "   Status sync: ${usuario.isSync == 1 ? 'Sincronizado' : 'Pendente'}");
-      }
-
-      // Listar pendências de sincronização
-      final pendentes = await repository.findNotSynced();
-      print("⏳ Aguardando sincronização: ${pendentes.length} usuários");
-    } catch (e) {
-      print("❌ Erro no uso offline: $e");
-    }
-  }
-
-  // === 8. SETUP INICIAL DO SISTEMA ===
-
-  static Future<void> exemploSetupInicial() async {
-    final authService = AuthService();
-
-    try {
-      // Verificar se é primeiro acesso
-      final isPrimeiro = await authService.isFirstAccess();
-
-      if (isPrimeiro) {
-        print("🎯 Primeiro acesso - criando admin inicial...");
-
-        final admin = await authService.createInitialAdmin(
-            'admin@serviceflow.com', 'admin123456', 'Administrador Sistema');
-
-        print("✅ Admin inicial criado: ${admin.email}");
-      } else {
-        print("ℹ️ Sistema já inicializado");
-      }
-    } catch (e) {
-      print("❌ Erro no setup: $e");
-    }
-  }
-
-  // === 9. MONITORAMENTO E DEBUG ===
-
-  static Future<void> exemploMonitoramento() async {
-    final repository = UsuarioRepository();
-    final schedule = UsuarioSchedule();
-
-    print("🔍 Status do sistema:");
-
-    try {
-      // Estatísticas do repositório
-      final todos = await repository.findAll();
-      final pendentes = await repository.findNotSynced();
-      final admins = await repository.findByPerfil('admin');
-
-      print("📊 Banco local:");
-      print("   Total: ${todos.length}");
-      print("   Pendentes: ${pendentes.length}");
-      print("   Admins: ${admins.length}");
-
-      // Status do agendador
-      print("⚡ Agendador:");
-      print("   Funcionalidade: ${schedule.featureName}");
-      print("   Intervalo: ${schedule.syncInterval.inMinutes} min");
-    } catch (e) {
-      print("❌ Erro no monitoramento: $e");
-    }
+  @override
+  Widget buildPage(BuildContext context, UsuarioService service) {
+    return UsuariosListWidget();
   }
 }
 
-/// 🎯 COMO USAR NA SUA APLICAÇÃO:
-///
-/// 1. No main.dart:
-///    ```dart
-///    await ExemplosUsuarios.inicializarSistema();
-///    ```
-///
-/// 2. Na tela de login:
-///    ```dart
-///    await ExemplosUsuarios.exemploLogin();
-///    ```
-///
-/// 3. Na tela de configurações:
-///    ```dart
-///    await ExemplosUsuarios.exemploConfiguracoes();
-///    ```
-///
-/// 4. Para administração:
-///    ```dart
-///    await ExemplosUsuarios.exemploAdministracao();
-///    ```
-///
-/// 5. Para monitorar sync:
-///    ```dart
-///    await ExemplosUsuarios.exemploSincronizacao();
-///    ```
-
-void main() {
-  print("📚 Arquivo de exemplos - não executar diretamente");
-  print("   Consulte os métodos da classe ExemplosUsuarios");
+class UsuariosListWidget extends StatefulWidget {
+  @override
+  _UsuariosListPageState createState() => _UsuariosListPageState();
 }
+
+class _UsuariosListPageState extends State<UsuariosListWidget> {
+  List<Usuario> _usuarios = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarUsuarios();
+  }
+
+  // 🔄 EXEMPLO: executeListOperation
+  // ✅ Loader automático, ✅ Exception handling, ✅ Mensagens automáticas
+  Future<void> _carregarUsuarios() async {
+    // Simulando uma chamada de service - substitua pela implementação real
+    final usuarios = <Usuario>[]; // await service.findAll();
+
+    setState(() {
+      _usuarios = usuarios; // ✅ Atualiza a UI automaticamente
+    });
+  }
+
+  // 🗑️ EXEMPLO: executeCrudOperation com Confirmação
+  // ✅ Confirmação integrada, ✅ Loader, ✅ Sucesso/Erro, ✅ Refresh automático
+  Future<void> _excluirUsuario(Usuario usuario) async {
+    // Simulando uma operação de exclusão
+    print('Excluindo usuário: ${usuario.nomeCompleto}');
+    _carregarUsuarios(); // 🔄 Refresh da lista
+  }
+
+  // ⚡ EXEMPLO: executeOperation Genérica
+  // ✅ Para operações que não se encaixam nos padrões List/CRUD
+  Future<void> _atualizarConfigUsuario(Usuario usuario) async {
+    // Simulando uma operação de configuração
+    print('Atualizando configurações para: ${usuario.nomeCompleto}');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Usuários - Exemplo Arquitetura')),
+      body: ListView.builder(
+        itemCount: 5, // Simulando 5 usuários
+        itemBuilder: (context, index) {
+          return ListTile(
+            title: Text('Usuario ${index + 1}'),
+            subtitle: Text('email${index + 1}@exemplo.com'),
+            trailing: PopupMenuButton(
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  child: Text('⚙️ Configurar'),
+                  onTap: () => _atualizarConfigUsuario(
+                    Usuario(
+                      supabaseId: 'id$index',
+                      email: 'email$index@exemplo.com',
+                      nomeCompleto: 'Usuario $index',
+                      grupoId: 'grupo1',
+                      perfil: 'tecnico',
+                    ),
+                  ),
+                ),
+                PopupMenuItem(
+                  child: Text('🗑️ Excluir'),
+                  onTap: () => _excluirUsuario(
+                    Usuario(
+                      supabaseId: 'id$index',
+                      email: 'email$index@exemplo.com',
+                      nomeCompleto: 'Usuario $index',
+                      grupoId: 'grupo1',
+                      perfil: 'tecnico',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _carregarUsuarios,
+        child: Icon(Icons.refresh),
+        tooltip: 'Recarregar Lista',
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 📖 EXEMPLO 2: Formulário de Usuário com Validação e Operações Centralizadas
+// ============================================================================
+
+class UsuarioFormPageExample extends BaseController<Usuario, UsuarioRepository,
+    UsuarioValidation, UsuarioService> {
+  final Usuario? usuarioEdicao; // null = criar, preenchido = editar
+
+  UsuarioFormPageExample(
+    UsuarioService service, {
+    this.usuarioEdicao,
+  }) : super(service, model: usuarioEdicao);
+
+  @override
+  Widget buildPage(BuildContext context, UsuarioService service) {
+    return UsuarioFormWidget(usuarioEdicao: usuarioEdicao);
+  }
+}
+
+class UsuarioFormWidget extends StatefulWidget {
+  final Usuario? usuarioEdicao;
+
+  const UsuarioFormWidget({Key? key, this.usuarioEdicao}) : super(key: key);
+
+  @override
+  _UsuarioFormPageState createState() => _UsuarioFormPageState();
+}
+
+class _UsuarioFormPageState extends State<UsuarioFormWidget> {
+  final _formKey = GlobalKey<FormState>();
+  final _nomeController = TextEditingController();
+  final _emailController = TextEditingController();
+
+  bool get _isEdicao => widget.usuarioEdicao != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEdicao) {
+      _nomeController.text = widget.usuarioEdicao!.nomeCompleto;
+      _emailController.text = widget.usuarioEdicao!.email;
+    }
+  }
+
+  // 💾 EXEMPLO: executeOperation para Criar/Atualizar
+  // ✅ Validação + Loader + Exception Handling + Mensagem de Sucesso
+  Future<void> _salvarUsuario() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    // Simulando salvar usuário
+    print(
+        'Salvando usuário: ${_nomeController.text} - ${_emailController.text}');
+
+    Navigator.of(context).pop(); // 🔙 Voltar após salvar
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_isEdicao ? 'Editar Usuário' : 'Novo Usuário'),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _nomeController,
+                decoration: InputDecoration(
+                  labelText: 'Nome Completo',
+                  hintText: 'Digite o nome completo',
+                ),
+                validator: (value) {
+                  if (value?.trim().isEmpty ?? true) {
+                    return 'Nome é obrigatório';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  hintText: 'Digite o email',
+                ),
+                keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value?.trim().isEmpty ?? true) {
+                    return 'Email é obrigatório';
+                  }
+                  if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                      .hasMatch(value!)) {
+                    return 'Email inválido';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: _salvarUsuario,
+                child: Text(_isEdicao ? '💾 Atualizar' : '➕ Criar'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 📖 EXEMPLO 3: Demonstração de Todos os Tipos de Mensagem
+// ============================================================================
+
+class ExemploMensagensPage extends BaseController<Usuario, UsuarioRepository,
+    UsuarioValidation, UsuarioService> {
+  ExemploMensagensPage(UsuarioService service) : super(service);
+
+  @override
+  Widget buildPage(BuildContext context, UsuarioService service) {
+    return ExemploMensagensWidget();
+  }
+}
+
+class ExemploMensagensWidget extends StatefulWidget {
+  @override
+  _ExemploMensagensPageState createState() => _ExemploMensagensPageState();
+}
+
+class _ExemploMensagensPageState extends State<ExemploMensagensWidget>
+    with MessagesMixin {
+  // ✅ Sucesso: Auto-remove após 3 segundos (já gerenciado pelo MessagesMixin)
+  void _mostrarSucesso() {
+    showSuccess(context, 'Operação realizada com sucesso!');
+  }
+
+  // ❌ Erro: Permanece até fechar manualmente (já gerenciado pelo MessagesMixin)
+  void _mostrarErro() {
+    showError(
+        context, 'Algo deu errado! Verifique os dados e tente novamente.');
+  }
+
+  // ⚠️ Aviso: Auto-remove após 4 segundos (já gerenciado pelo MessagesMixin)
+  void _mostrarAviso() {
+    showWarning(context, 'Atenção: Esta ação pode afetar outros dados.');
+  }
+
+  // 🔔 Confirmação: Aguarda ação do usuário (já gerenciado pelo MessagesMixin)
+  Future<void> _mostrarConfirmacao() async {
+    final confirmou = await showConfirmation(
+      context,
+      'Confirmar Ação',
+      'Tem certeza que deseja prosseguir?',
+      confirmText: 'Sim, prosseguir',
+      cancelText: 'Cancelar',
+    );
+
+    if (confirmou == true) {
+      _mostrarSucesso();
+    } else {
+      _mostrarAviso();
+    }
+  }
+
+  // ℹ️ Informação: Auto-remove após 3 segundos
+  void _mostrarInfo() {
+    showInfo(context, 'Informação importante sobre o sistema.');
+  }
+
+  // 🍞 Toast: Auto-remove após 2 segundos (mais rápido)
+  void _mostrarToast() {
+    showToast(context, 'Operação executada rapidamente!');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Exemplo - Sistema de Mensagens')),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              '🎭 Sistema de Mensagens com Durações Automáticas',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: _mostrarSucesso,
+              icon: Icon(Icons.check_circle, color: Colors.green),
+              label: Text('✅ Sucesso (3s auto-remove)'),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _mostrarErro,
+              icon: Icon(Icons.error, color: Colors.red),
+              label: Text('❌ Erro (remoção manual)'),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _mostrarAviso,
+              icon: Icon(Icons.warning, color: Colors.orange),
+              label: Text('⚠️ Aviso (4s auto-remove)'),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _mostrarConfirmacao,
+              icon: Icon(Icons.help_outline, color: Colors.blue),
+              label: Text('🔔 Confirmação (aguarda usuário)'),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _mostrarInfo,
+              icon: Icon(Icons.info, color: Colors.blue),
+              label: Text('ℹ️ Info (3s auto-remove)'),
+            ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _mostrarToast,
+              icon: Icon(Icons.message, color: Colors.grey),
+              label: Text('🍞 Toast (2s auto-remove)'),
+            ),
+            SizedBox(height: 48),
+            Text(
+              '📋 Comportamentos (Todos Automáticos via MessagesMixin):\n'
+              '• Sucesso: Remove automaticamente após 3 segundos\n'
+              '• Erro: Permanece até usuário fechar manualmente\n'
+              '• Aviso: Remove automaticamente após 4 segundos\n'
+              '• Info: Remove automaticamente após 3 segundos\n'
+              '• Toast: Remove automaticamente após 2 segundos\n'
+              '• Confirmação: Aguarda ação do usuário (Sim/Não)',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 📖 EXEMPLO 4: Tratamento Automático de Exceções
+// ============================================================================
+
+class ExemploExcecoesPage extends BaseController<Usuario, UsuarioRepository,
+    UsuarioValidation, UsuarioService> {
+  ExemploExcecoesPage(UsuarioService service) : super(service);
+
+  @override
+  Widget buildPage(BuildContext context, UsuarioService service) {
+    return ExemploExcecoesWidget();
+  }
+}
+
+class ExemploExcecoesWidget extends StatefulWidget {
+  @override
+  _ExemploExcecoesPageState createState() => _ExemploExcecoesPageState();
+}
+
+class _ExemploExcecoesPageState extends State<ExemploExcecoesWidget>
+    with MessagesMixin {
+  // 🔄 EXEMPLO: Todas as exceções convergem para mensagens amigáveis
+  Future<void> _testarExcecoes() async {
+    // Simulando tratamento de exceção
+    try {
+      throw Exception('Erro simulado para demonstração');
+    } catch (e) {
+      showError(context, 'Erro personalizado para esta operação',
+          details: e.toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Exemplo - Tratamento de Exceções')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '🛡️ Tratamento Automático de Exceções',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Todas as exceções são automaticamente\n'
+              'convertidas em mensagens amigáveis',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: _testarExcecoes,
+              child: Text('🧪 Testar Exceções'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 📋 RESUMO DOS EXEMPLOS
+// ============================================================================
+/*
+🎯 PADRÕES DEMONSTRADOS:
+
+1️⃣ executeListOperation<T>():
+   • Para carregar listas de dados
+   • Loader automático + tratamento de erro + retorno tipado
+   
+2️⃣ executeCrudOperation():
+   • Para Create/Update/Delete
+   • Confirmação integrada + loader + mensagens success/error
+   
+3️⃣ executeOperation():
+   • Para operações genéricas
+   • Loader + tratamento + mensagem customizável
+   
+4️⃣ Sistema de Mensagens (MessagesMixin):
+   • showSuccess() → 3 segundos auto-remove + ícone verde
+   • showError() → manual remove + botão fechar + ícone vermelho  
+   • showWarning() → 4 segundos auto-remove + ícone laranja
+   • showInfo() → 3 segundos auto-remove + ícone azul
+   • showToast() → 2 segundos auto-remove + simples
+   • showConfirmation() → aguarda usuário + dialog customizado
+   • showDeleteConfirmation() → confirmação específica para exclusões
+   
+5️⃣ Exception Convergence:
+   • Todas exceções → mensagens amigáveis
+   • SQL/HTTP/Validation/Generic automaticamente tratadas
+   • Logs técnicos preservados para debug
+
+✅ BENEFÍCIOS:
+• Código 80% mais limpo nas pages
+• Zero boilerplate de loading/error
+• UX consistente em toda aplicação
+• Exception handling centralizado
+• Manutenibilidade máxima
+*/

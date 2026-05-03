@@ -16,6 +16,7 @@ class ClientePage extends BaseController<Cliente, ClienteRepository,
   Widget buildPage(BuildContext context, ClienteService service) {
     return _ClientePageState(
       context: context,
+      controller: this,
       service: service,
       nomeController: TextEditingController(),
       emailController: TextEditingController(),
@@ -30,6 +31,7 @@ class ClientePage extends BaseController<Cliente, ClienteRepository,
 
 class _ClientePageState extends StatelessWidget {
   final BuildContext context;
+  final ClientePage controller;
   final ClienteService service;
   final Cliente cliente = Cliente(nome: '', email: '', telefone: '');
 
@@ -43,6 +45,7 @@ class _ClientePageState extends StatelessWidget {
 
   _ClientePageState({
     required this.context,
+    required this.controller,
     required this.service,
     required this.nomeController,
     required this.emailController,

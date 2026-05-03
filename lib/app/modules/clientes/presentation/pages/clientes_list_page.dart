@@ -7,6 +7,7 @@ import 'package:serviceflow/app/modules/clientes/cliente.validation.dart';
 import 'package:serviceflow/app/shared/widgets/custom_buttons.dart';
 import 'package:serviceflow/app/shared/widgets/custom_dialogs.dart';
 import 'package:serviceflow/app/shared/widgets/custom_cards.dart';
+import 'package:serviceflow/app/shared/widgets/custom_popup_menu.dart';
 import 'package:serviceflow/app/shared/constants/app_icons.dart';
 
 class ClientesListPage extends BaseController<Cliente, ClienteRepository,
@@ -15,23 +16,29 @@ class ClientesListPage extends BaseController<Cliente, ClienteRepository,
 
   @override
   Widget buildPage(BuildContext context, ClienteService service) {
-    return ClientesListView(service: service);
+    return _ClientesListView(
+      service: service,
+      controller: this, // Passa o controller para acessar os mixins
+    );
   }
 }
 
-class ClientesListView extends StatefulWidget {
+class _ClientesListView extends StatefulWidget {
   final ClienteService service;
+  final ClientesListPage controller;
 
-  const ClientesListView({super.key, required this.service});
+  const _ClientesListView({
+    required this.service,
+    required this.controller,
+  });
 
   @override
-  State<ClientesListView> createState() => _ClientesListViewState();
+  State<_ClientesListView> createState() => _ClientesListViewState();
 }
 
-class _ClientesListViewState extends State<ClientesListView> {
+class _ClientesListViewState extends State<_ClientesListView> {
   List<Cliente> _clientes = [];
-  bool _isLoading = true;
-  bool _mostrarInativos = true; // Por padrão, mostra todos
+  bool _mostrarInativos = true;
 
   // Getter para filtrar clientes baseado no estado
   List<Cliente> get _clientesFiltrados {
@@ -49,19 +56,16 @@ class _ClientesListViewState extends State<ClientesListView> {
   }
 
   Future<void> _carregarClientes() async {
-    setState(() => _isLoading = true);
-    try {
-      final clientes = await widget.service.listar();
-      setState(() {
-        _clientes = clientes;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar clientes: $e')),
-      );
-    }
+    final result = await widget.controller.executeListOperation(
+      context,
+      widget.service.listar(),
+      loadingMessage: 'Carregando clientes...',
+      errorMessage: 'Erro ao carregar lista de clientes',
+    );
+
+    setState(() {
+      _clientes = result;
+    });
   }
 
   @override
@@ -72,47 +76,17 @@ class _ClientesListViewState extends State<ClientesListView> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
-          PopupMenuButton<String>(
-            icon: Icon(
-              _mostrarInativos ? AppIcons.visibility : AppIcons.visibilityOff,
-              color: Colors.white,
-            ),
-            onSelected: (value) {
+          FilterPopupMenuButton(
+            showInactive: _mostrarInativos,
+            onChanged: (showInactive) {
               setState(() {
-                _mostrarInativos = value == 'todos';
+                _mostrarInativos = showInactive;
               });
             },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'todos',
-                child: Row(
-                  children: [
-                    Icon(
-                      _mostrarInativos ? AppIcons.check : null,
-                      color: Colors.blue,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('Mostrar Inativos'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'ativos',
-                child: Row(
-                  children: [
-                    Icon(
-                      !_mostrarInativos ? AppIcons.check : null,
-                      color: Colors.blue,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text('Apenas Ativos'),
-                  ],
-                ),
-              ),
-            ],
           ),
           IconButton(
             icon: Icon(AppIcons.refresh),
+            tooltip: 'Atualizar lista',
             onPressed: _carregarClientes,
           ),
         ],
@@ -122,21 +96,19 @@ class _ClientesListViewState extends State<ClientesListView> {
         tooltip: 'Adicionar Cliente',
         onPressed: () => Navigator.pushNamed(context, '/cliente/novo'),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _clientesFiltrados.isEmpty
-              ? _buildEmptyState()
-              : RefreshIndicator(
-                  onRefresh: _carregarClientes,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: _clientesFiltrados.length,
-                    itemBuilder: (context, index) {
-                      final cliente = _clientesFiltrados[index];
-                      return _buildClienteCard(cliente);
-                    },
-                  ),
-                ),
+      body: _clientesFiltrados.isEmpty
+          ? _buildEmptyState()
+          : RefreshIndicator(
+              onRefresh: _carregarClientes,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(8),
+                itemCount: _clientesFiltrados.length,
+                itemBuilder: (context, index) {
+                  final cliente = _clientesFiltrados[index];
+                  return _buildClienteCard(cliente);
+                },
+              ),
+            ),
     );
   }
 
@@ -211,71 +183,34 @@ class _ClientesListViewState extends State<ClientesListView> {
             ),
         ],
       ),
-      trailing: PopupMenuButton<String>(
-        onSelected: (value) {
-          switch (value) {
-            case 'editar':
-              Navigator.pushNamed(context, '/cliente/editar',
-                  arguments: cliente);
-              break;
-            case 'desativar':
-              _confirmarDesativacao(cliente);
-              break;
-            case 'ativar':
-              _reativarCliente(cliente);
-              break;
-            case 'excluir':
-              _confirmarExclusao(cliente);
-              break;
-          }
-        },
-        itemBuilder: (context) => [
-          PopupMenuItem(
-            value: 'editar',
-            child: Row(
-              children: [
-                Icon(AppIcons.edit, color: Colors.blue),
-                const SizedBox(width: 8),
-                const Text('Editar'),
-              ],
-            ),
-          ),
-          if (cliente.ativo)
-            PopupMenuItem(
-              value: 'desativar',
-              child: Row(
-                children: [
-                  Icon(AppIcons.inactive, color: Colors.orange),
-                  const SizedBox(width: 8),
-                  const Text('Desativar'),
-                ],
-              ),
-            )
-          else
-            PopupMenuItem(
-              value: 'ativar',
-              child: Row(
-                children: [
-                  Icon(AppIcons.active, color: Colors.green),
-                  const SizedBox(width: 8),
-                  const Text('Ativar'),
-                ],
-              ),
-            ),
-          PopupMenuItem(
-            value: 'excluir',
-            child: Row(
-              children: [
-                Icon(AppIcons.delete, color: Colors.red),
-                const SizedBox(width: 8),
-                const Text('Excluir Permanente'),
-              ],
-            ),
-          ),
-        ],
+      trailing: CrudPopupMenuButton<Cliente>(
+        item: cliente,
+        isActive: cliente.ativo,
+        onSelected: (action) => _handleAction(action, cliente),
+        showDetails: true,
       ),
       onTap: () => _mostrarDetalhesCliente(cliente),
     );
+  }
+
+  void _handleAction(String action, Cliente cliente) {
+    switch (action) {
+      case 'editar':
+        Navigator.pushNamed(context, '/cliente/editar', arguments: cliente);
+        break;
+      case 'desativar':
+        _confirmarDesativacao(cliente);
+        break;
+      case 'ativar':
+        _reativarCliente(cliente);
+        break;
+      case 'excluir':
+        _confirmarExclusao(cliente);
+        break;
+      case 'detalhes':
+        _mostrarDetalhesCliente(cliente);
+        break;
+    }
   }
 
   void _mostrarDetalhesCliente(Cliente cliente) {
@@ -332,79 +267,61 @@ class _ClientesListViewState extends State<ClientesListView> {
     );
   }
 
-  void _confirmarExclusao(Cliente cliente) async {
-    final confirmar = await CustomConfirmDialog.showDeleteConfirmation(
-      context,
-      itemName: 'o cliente ${cliente.nome}',
-    );
-
-    if (confirmar == true) {
-      await _excluirCliente(cliente);
-    }
+  Future<void> _confirmarExclusao(Cliente cliente) async {
+    // A confirmação agora é feita automaticamente no executeCrudOperation
+    await _excluirCliente(cliente);
   }
 
-  void _confirmarDesativacao(Cliente cliente) async {
-    final confirmar = await CustomConfirmDialog.showDeactivateConfirmation(
-      context,
-      itemName: 'o cliente ${cliente.nome}',
-    );
-
-    if (confirmar == true) {
-      await _desativarCliente(cliente);
-    }
+  Future<void> _confirmarDesativacao(Cliente cliente) async {
+    // A confirmação agora é feita automaticamente no executeCrudOperation
+    await _desativarCliente(cliente);
   }
 
   Future<void> _excluirCliente(Cliente cliente) async {
-    try {
-      if (cliente.id != null) {
-        await widget.service.delete(cliente.id!);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cliente excluído com sucesso')),
-        );
-        _carregarClientes();
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao excluir cliente: $e')),
-      );
+    final sucesso = await widget.controller.executeCrudOperation(
+      context,
+      widget.service.delete(cliente.id!),
+      confirmTitle: 'Confirmar Exclusão',
+      confirmMessage:
+          'Tem certeza que deseja excluir o cliente ${cliente.nome}? Esta ação não pode ser desfeita.',
+      loadingMessage: 'Excluindo cliente...',
+      successMessage: 'Cliente excluído com sucesso',
+      requiresConfirmation: true,
+    );
+
+    if (sucesso) {
+      _carregarClientes();
     }
   }
 
   Future<void> _desativarCliente(Cliente cliente) async {
-    try {
-      if (cliente.id != null) {
-        await widget.service.softDelete(cliente.id!);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Cliente ${cliente.nome} desativado'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        _carregarClientes();
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao desativar cliente: $e')),
-      );
+    final sucesso = await widget.controller.executeCrudOperation(
+      context,
+      widget.service.softDelete(cliente.id!),
+      confirmTitle: 'Confirmar Desativação',
+      confirmMessage:
+          'Tem certeza que deseja desativar o cliente ${cliente.nome}?',
+      loadingMessage: 'Desativando cliente...',
+      successMessage: 'Cliente desativado com sucesso',
+      requiresConfirmation: true,
+    );
+
+    if (sucesso) {
+      _carregarClientes();
     }
   }
 
   Future<void> _reativarCliente(Cliente cliente) async {
-    try {
-      if (cliente.id != null) {
-        await widget.service.reactivate(cliente.id!);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Cliente ${cliente.nome} reativado'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _carregarClientes();
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao reativar cliente: $e')),
-      );
+    await widget.controller.executeOperation(
+      context,
+      widget.service.reactivate(cliente.id!),
+      loadingMessage: 'Reativando cliente...',
+      successMessage: 'Cliente reativado com sucesso',
+      showSuccessMessage: true,
+    );
+
+    if (true) {
+      _carregarClientes();
     }
   }
 }

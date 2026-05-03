@@ -5,6 +5,7 @@ export 'custom_dialogs.dart';
 export 'custom_text_field.dart';
 export 'custom_home_components.dart';
 export 'custom_drawer.dart';
+export 'custom_popup_menu.dart';
 export 'app_logo.dart';
 
 // Constantes
