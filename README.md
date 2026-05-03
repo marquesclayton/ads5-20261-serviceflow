@@ -924,6 +924,12 @@ components:
 - **✅ Build Time:** 39.4s (otimizado)
 - **⚠️ Warnings:** Apenas 2 warnings menores + 3 infos de depreciação (não impedem funcionamento)
 
+### 🔧 **Correções Críticas Recentes (Mai/2026):**
+- **✅ Tela Branca Resolvida:** runApp() implementado corretamente no main.dart
+- **✅ LogService Robusto:** Auto-criação de tabelas + tratamento de erros gracioso
+- **✅ MessagesMixin Padronizado:** Durações automáticas e componentes consistentes
+- **✅ Inicialização Sequencial:** Supabase → DB → Logs → App com fallback de erro
+
 ### 🏗️ **Arquitetura Status: COMPLETA** 
 - **✅ BaseProvider + BaseSchedule:** Implementação completa e funcional
 - **✅ ScheduleManager:** Sistema centralizado de coordenação ativo

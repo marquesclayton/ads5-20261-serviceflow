@@ -36,6 +36,8 @@ class DbHelper {
 
   // 5. O momento da criação das tabelas
   Future _onCreate(Database db, int version) async {
+    print('🔄 Criando tabelas do banco de dados...');
+
     try {
       // Lê o arquivo texto dos assets que definimos
       final String script =
@@ -44,14 +46,25 @@ class DbHelper {
       // Divide os comandos por ponto e vírgula
       final List<String> commands = script.split(';');
 
+      // Executa cada comando individualmente
       for (final command in commands) {
-        if (command.trim().isNotEmpty) {
-          await db.execute(command);
+        final trimmedCommand = command.trim();
+        if (trimmedCommand.isNotEmpty) {
+          try {
+            await db.execute(trimmedCommand);
+          } catch (e) {
+            print('❌ Erro ao executar comando SQL: $trimmedCommand');
+            print('❌ Erro: $e');
+            rethrow; // Propagar o erro para não deixar banco inconsistente
+          }
         }
       }
-      print('--- BANCO DE DADOS CRIADO COM SUCESSO ---');
-    } catch (e) {
-      print('--- ERRO AO CRIAR TABELAS: $e ---');
+
+      print('✅ Banco de dados criado com sucesso');
+    } catch (e, stackTrace) {
+      print('❌ ERRO CRÍTICO ao criar tabelas: $e');
+      print('📋 Stack: $stackTrace');
+      rethrow; // Importante: não deixar a aplicação rodar com banco corrompido
     }
   }
 }

@@ -22,15 +22,19 @@ class LogService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    // Cleanup automático na inicialização (logs mais antigos que 30 dias)
     try {
+      // ✅ Garantir que as tabelas existem antes de tentar cleanup
+      await _repository.ensureTableExists();
+
+      // Cleanup automático na inicialização (logs mais antigos que 30 dias)
       final deletedCount = await _repository.cleanupOldLogs();
       if (kDebugMode && deletedCount > 0) {
         print('🧹 LogService: Removidos $deletedCount logs antigos');
       }
     } catch (e) {
+      // ⚠️ Não deixar que erro no cleanup impeça inicialização
       if (kDebugMode) {
-        print('⚠️ LogService: Erro no cleanup: $e');
+        print('! LogService: Erro no cleanup: $e');
       }
     }
 

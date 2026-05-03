@@ -10,13 +10,29 @@ void main() async {
   // 1. Garante a inicialização da comunicação com o sistema nativo
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Exemplo: Aqui deve-se carregar o Banco de Dados ou as Configurações
-  await DbHelper.instance.database;
+  try {
+    // 2. Inicializar Supabase PRIMEIRO (mais rápido)
+    await initializeSupabase();
 
-  // 3. Inicializar sistema de logging centralizado
-  await LogService().initialize();
+    // 3. Carregar o Banco de Dados local (inclui criação de tabelas)
+    print('🔄 Inicializando banco de dados...');
+    await DbHelper.instance.database;
+    print('✅ Banco de dados inicializado');
 
-  // 4. Inicializar Supabase ANTES do app rodar
+    // 4. Inicializar sistema de logging centralizado (após DB pronto)
+    print('🔄 Inicializando sistema de logs...');
+    await LogService().initialize();
+
+    // 5. ✅ EXECUTAR A APLICAÇÃO
+    runApp(const AppEntry());
+  } catch (e, stackTrace) {
+    // Em caso de erro na inicialização, logar e tentar rodar mesmo assim
+    print('❌ Erro na inicialização: $e');
+    print('📋 Stack: $stackTrace');
+
+    // Tentar rodar a aplicação mesmo com erro na inicialização
+    runApp(const AppEntry());
+  }
 }
 
 Future<void> initializeSupabase() async {

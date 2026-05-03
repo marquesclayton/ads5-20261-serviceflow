@@ -23,6 +23,24 @@ class LogRepository extends BaseRepository<LogEntry> {
     return entry.fromMap(map);
   }
 
+  /// ✅ Garantir que a tabela system_logs existe (deve ter sido criada pelo create_tables.sql)
+  Future<void> ensureTableExists() async {
+    final db = await getConnection();
+
+    try {
+      // Tenta fazer uma query simples para verificar se a tabela existe
+      await db.rawQuery('SELECT 1 FROM $tableName LIMIT 1');
+    } catch (e) {
+      // Se a tabela não existir, é um problema na inicialização do banco
+      if (e.toString().contains('no such table')) {
+        throw Exception(
+            'Tabela $tableName não encontrada. Verifique se o script create_tables.sql foi executado corretamente.');
+      } else {
+        rethrow; // Outros erros devem ser propagados
+      }
+    }
+  }
+
   /// Buscar logs por nível (error, warning, info, debug)
   Future<List<LogEntry>> findByLevel(String level, {int limit = 100}) async {
     final db = await getConnection();
