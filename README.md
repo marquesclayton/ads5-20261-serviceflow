@@ -15,7 +15,7 @@ O projeto implementa uma **Arquitetura Offline-First com Camadas Base**, focada 
 * **BaseValidation<E,R>:** Validações assíncronas type-safe com regras de negócio específicas para create/update
 * **BaseService<E,R,V>:** Orquestração validation → repository com fluxo assíncrono de negócio
 * **BaseController<E,R,V,S>:** Gestão de estados UI (extends `StatefulWidget`) com loading/error
-* **BaseProvider<E>:** Abstração genérica para comunicação com APIs externas via **AppClient**
+* **BaseProvider<E>:** Abstração genérica para comunicação com APIs externas via **AppClient** com logging centralizado
 * **BaseSchedule<E,R,P>:** Abstração genérica para sincronização automática background por feature
 
 ### 🌐 Camada de Comunicação Externa
@@ -28,6 +28,9 @@ O projeto implementa uma **Arquitetura Offline-First com Camadas Base**, focada 
 * **DbHelper:** Singleton SQLite manager para controle do banco local como fonte primária
 * **SQLite Database:** Banco local com schema completo para operação offline-first
 * **Sync Control:** Campo `is_sync` em todas as tabelas para controle de sincronização
+* **LogService:** Sistema centralizado de logging com persistência em SQLite
+* **LogRepository:** Repositório específico para armazenamento e consulta de logs do sistema
+* **LogEntry:** Modelo estruturado de logs com metadados (timestamp, nível, operação, origem)
 
 ### 🔄 Sistema de Sincronização Automática
 * **ScheduleManager:** Coordenador central de todos os schedules do sistema
@@ -65,6 +68,7 @@ O projeto implementa uma **Arquitetura Offline-First com Camadas Base**, focada 
 4.  **Laboratório:** Página de testes de hardware (câmera, assinatura, conectividade)
 5.  **Dashboard:** Interface principal com navegação modular e componentes customizados
 6.  **Sistema de Sincronização:** BaseProvider + BaseSchedule + ScheduleManager funcionais
+7.  **Sistema de Logging:** LogService centralizado com persistência SQLite e tratamento de erros padronizado
 
 ### 🚧 **Em Desenvolvimento (EmDesenvolvimentoPage):**
 1.  **Ordens de Serviço:** Interface de gestão de O.S. com evidências
@@ -95,6 +99,10 @@ lib/
 │   │   ├── mixins/             # Loader, Messager, UiFeedback
 │   │   ├── repositories/       # Repositories compartilhados
 │   │   ├── services/           # AuthService, ScheduleManager, SyncSystemInitializer
+│   │   ├── logging/            # Sistema de Logging Centralizado
+│   │   │   ├── log.service.dart         # LogService singleton para logging
+│   │   │   ├── log.repository.dart      # LogRepository para persistência
+│   │   │   └── log.model.dart           # LogEntry modelo estruturado
 │   │   ├── http/               # Comunicação Externa
 │   │   │   ├── app_client.dart          # AppClient singleton (Dio)
 │   │   │   └── interceptors/            # AuthInterceptor, ErrorInterceptor
@@ -177,11 +185,13 @@ classDiagram
     class BaseProvider {
         <<abstract>>
         +AppClient client
+        +LogService logger
         +String endpoint
         +toExternalFormat(entity) Map
         +fromExternalFormat(data) E
         +syncToCloud(entity) Future
         +fetchFromCloud() Future
+        +handleError(operation, error) void
         +validateBeforeSync(entity) Future
         +resolveConflict(local, remote) Future
     }
@@ -225,6 +235,41 @@ classDiagram
         +syncAll() Future
         +syncFeature(name) Future
         +registerSchedule(schedule) void
+    }
+
+    %% Sistema de Logging Centralizado
+    class LogService {
+        <<singleton>>
+        +LogRepository logRepository
+        +error(source, operation, message) Future
+        +warning(source, operation, message) Future
+        +info(source, operation, message) Future
+        +debug(source, operation, message) Future
+        +handleProviderError(source, operation, error) Future
+        +logSyncOperation(feature, operation, success) Future
+        +initialize() Future
+    }
+
+    class LogRepository {
+        +tableName = "system_logs"
+        +logError(entry) Future
+        +findByLevel(level) Future
+        +findRecent(hours) Future
+        +cleanupOldLogs(days) Future
+        +findBySource(source) Future
+    }
+
+    class LogEntry {
+        +String level
+        +String source
+        +String operation
+        +String message
+        +DateTime timestamp
+        +String metadata
+        +static error(source, operation, message) LogEntry
+        +static warning(source, operation, message) LogEntry
+        +static info(source, operation, message) LogEntry
+        +static debug(source, operation, message) LogEntry
     }
 
     %% Provider Layer (API Communication)
@@ -339,6 +384,9 @@ classDiagram
     
     BaseRepository <|-- UsuarioRepository
     BaseRepository <|-- ClienteRepository
+    BaseRepository <|-- LogRepository
+    
+    BaseModel <|-- LogEntry
     
     BaseProvider <|-- UsuarioProvider
     
@@ -346,6 +394,11 @@ classDiagram
     
     BaseService --> BaseRepository
     BaseService --> BaseValidation
+    
+    %% Sistema de Logging
+    LogService --> LogRepository
+    LogRepository --> LogEntry
+    BaseProvider --> LogService
     
     %% Relacionamentos entre Entidades
     OrdemServico --> Cliente
@@ -448,6 +501,19 @@ classDiagram
 | descricao_snapshot | TEXT | NULLABLE | Descrição no momento da execução |
 | preco_snapshot | REAL | NULLABLE | Preço no momento da execução |
 | ativo | INTEGER | DEFAULT 1 | Status ativo/inativo |
+| is_sync | INTEGER | DEFAULT 0 | Controle sincronização |
+| created_at | DATETIME | DEFAULT CURRENT_TIMESTAMP | Data criação |
+
+#### 🟥 **system_logs** (Sistema de Logging Centralizado)
+| Campo | Tipo | Restrição | Descrição |
+|:---|:---|:---|:---|
+| id | INTEGER | PK AUTOINCREMENT | Chave primária |
+| level | TEXT | NOT NULL | error, warning, info, debug |
+| source | TEXT | NOT NULL | Origem do log (classe/módulo) |
+| operation | TEXT | NOT NULL | Operação executada |
+| message | TEXT | NOT NULL | Mensagem do log |
+| metadata | TEXT | NULLABLE | JSON com dados adicionais |
+| timestamp | DATETIME | DEFAULT CURRENT_TIMESTAMP | Data/hora do evento |
 | is_sync | INTEGER | DEFAULT 0 | Controle sincronização |
 | created_at | DATETIME | DEFAULT CURRENT_TIMESTAMP | Data criação |
 
@@ -554,10 +620,48 @@ Navigator.pushNamed(
 
 ### 🚫 **Práticas PROIBIDAS:**
 
+#### **Sistema de Logging Centralizado (OBRIGATÓRIO)**
+* ✅ **Usar LogService** para todos os logs da aplicação via `handleError()` nos providers
+* ✅ **Persistir logs** estruturados no SQLite via LogRepository/LogEntry
+* ✅ **Classificar logs** por nível: error, warning, info, debug
+* ✅ **Incluir contexto** sempre: source (classe), operation (método), message (detalhes)
+* ❌ **Jamais usar print()** - sistema de logging persiste e estrutura os dados
+
+```dart
+// ✅ CORRETO - Provider usando handleError centralizado
+class ClienteProvider extends BaseProvider<Cliente> {
+  Future<bool> syncToCloud(Cliente cliente) async {
+    try {
+      // Operação de sincronização
+      return true;
+    } catch (e) {
+      handleError('syncToCloud', e); // Log centralizado!
+      return false;
+    }
+  }
+}
+
+// ✅ CORRETO - LogService em serviços personalizados
+class AuthService {
+  final LogService _logger = LogService();
+  
+  Future<bool> login(String email) async {
+    try {
+      // Login logic
+      _logger.info('AuthService', 'login', 'Login realizado: $email');
+      return true;
+    } catch (e) {
+      _logger.error('AuthService', 'login', 'Erro no login: ${e.toString()}');
+      return false;
+    }
+  }
+}
+```
+
 #### **Debug & Logging**
 * ❌ **Jamais usar `print()`** em código de produção
 * ❌ **Não deixar `debugPrint()`** commitado sem necessidade
-* ✅ **Usar logging framework** apropriado (flutter `kDebugMode`)
+* ✅ **Usar LogService** para logging estruturado e persistente
 
 #### **Tratamento de Erros**
 * ❌ **Não usar `try/catch` genéricos** sem tratamento específico  
@@ -611,24 +715,29 @@ lib/app/modules/[nome_modulo]/
 - [ ] Schedule registrado no ScheduleManager quando aplicável
 - [ ] Provider implementa `validateBeforeSync()` com regras específicas
 - [ ] Provider usa AppClient para comunicação externa - NÃO usar DbHelper no Provider  
+- [ ] **Sistema de logging: Provider usa handleError() centralizado** ⭐ NOVO
+- [ ] **LogService utilizado para logs estruturados em serviços** ⭐ NOVO
 - [ ] Usa componentes da biblioteca shared/widgets
 - [ ] Implementa offline-first (SQLite primeiro via DbHelper)
 - [ ] Segue padrão de injeção de dependência
 - [ ] Usa ErrorModel para tratamento padronizado
 - [ ] Implementa UiFeedbackMixin para mensagens
-- [ ] Remove prints/debugs antes do commit
+- [ ] Remove prints/debugs antes do commit - **USE LogService** ⭐
 - [ ] Testa funcionalidade offline
 - [ ] Valida sincronização em background via Provider → AppClient
 
 ## � Inicialização
 
-### Sistema de Sincronização Automática
+### Sistema de Sincronização Automática & Logging
 
-Para ativar a sincronização automática em background, adicione no `main.dart`:
+Para ativar a sincronização automática e sistema de logging centralizado, adicione no `main.dart`:
 
 ```dart
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializar sistema de logging (OBRIGATÓRIO)
+  await LogService.initialize();
   
   // Inicializar sistema de sincronização
   await SyncSystemInitializer.initialize();

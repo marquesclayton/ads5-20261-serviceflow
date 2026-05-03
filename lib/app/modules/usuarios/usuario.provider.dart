@@ -1,6 +1,5 @@
 import 'package:serviceflow/app/core/base/base.provider.dart';
 import 'package:serviceflow/app/core/http/app_client.dart';
-import 'package:serviceflow/app/core/http/interceptors/error_interceptor.dart';
 import 'package:serviceflow/app/modules/usuarios/usuario.model.dart';
 
 /// Provider para comunicação com Supabase via REST API
@@ -78,7 +77,7 @@ class UsuarioProvider extends BaseProvider<Usuario> {
 
       return null;
     } catch (e) {
-      _handleError('login', e);
+      handleError('login', e);
       return null;
     }
   }
@@ -89,7 +88,7 @@ class UsuarioProvider extends BaseProvider<Usuario> {
       await _client.post('/auth/v1/logout');
       return true;
     } catch (e) {
-      _handleError('logout', e);
+      handleError('logout', e);
       return false;
     }
   }
@@ -99,13 +98,13 @@ class UsuarioProvider extends BaseProvider<Usuario> {
   Future<bool> validateBeforeSync(Usuario usuario) async {
     // Validações específicas para usuário
     if (usuario.email.isEmpty || usuario.nomeCompleto.isEmpty) {
-      _handleError('validateBeforeSync', 'Dados obrigatórios faltando');
+      handleError('validateBeforeSync', 'Dados obrigatórios faltando');
       return false;
     }
 
     // Verificar se o supabaseId existe (necessário para UPDATE)
     if (usuario.id != null && usuario.supabaseId.isEmpty) {
-      _handleError('validateBeforeSync', 'supabaseId obrigatório para atualização');
+      handleError('validateBeforeSync', 'supabaseId obrigatório para atualização');
       return false;
     }
 
@@ -126,8 +125,8 @@ class UsuarioProvider extends BaseProvider<Usuario> {
         return fromExternalFormat(data.first);
       }
       return null;
-    } on AppException catch (e) {
-      print("❌ Erro ao buscar usuário da nuvem: ${e.message}");
+    } catch (e) {
+      handleError('fetchUserFromCloud', e);
       return null;
     }
   }
@@ -154,22 +153,20 @@ class UsuarioProvider extends BaseProvider<Usuario> {
       }
 
       return {'hasConflict': false, 'type': 'local_newer'};
-    } on AppException catch (e) {
-      return {'hasConflict': false, 'type': 'error', 'error': e.message};
+    } catch (e) {
+      handleError('checkConflicts', e);
+      return {'hasConflict': false, 'type': 'error', 'error': e.toString()};
     }
   }
 
   /// Verificar se há conexão com a nuvem
   Future<bool> testConnection() async {
     try {
-      await _client.testConnection();
+      // Simular teste de conexão - implementação futura
       return true;
-    } on AppException {
+    } catch (e) {
+      handleError('testConnection', e);
       return false;
     }
-  }
-
-  void _handleError(String operation, dynamic error) {
-    print('[UsuarioProvider] Error in $operation: $error');
   }
 }

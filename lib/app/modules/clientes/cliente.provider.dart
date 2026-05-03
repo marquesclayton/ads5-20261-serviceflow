@@ -50,12 +50,12 @@ class ClienteProvider extends BaseProvider<Cliente> {
     if (cliente.nome.isEmpty ||
         cliente.email.isEmpty ||
         cliente.telefone.isEmpty) {
-      _handleError('validateBeforeSync', 'Dados obrigatórios faltando');
+      handleError('validateBeforeSync', 'Dados obrigatórios faltando');
       return false;
     }
 
     if (!_isValidEmail(cliente.email)) {
-      _handleError('validateBeforeSync', 'Email inválido');
+      handleError('validateBeforeSync', 'Email inválido');
       return false;
     }
 
@@ -64,9 +64,5 @@ class ClienteProvider extends BaseProvider<Cliente> {
 
   bool _isValidEmail(String email) {
     return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
-  }
-
-  void _handleError(String operation, dynamic error) {
-    print('[ClienteProvider] Error in $operation: $error');
   }
 }

@@ -79,3 +79,16 @@ CREATE TABLE os_itens (
     FOREIGN KEY (os_id) REFERENCES ordens_servico (id),
     FOREIGN KEY (servico_id) REFERENCES servicos (id)
 );
+
+-- Tabela de Logs do Sistema (centralizada)
+CREATE TABLE system_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    level TEXT NOT NULL, -- 'error', 'warning', 'info', 'debug'
+    source TEXT NOT NULL, -- 'UsuarioProvider', 'ClienteProvider', etc.
+    operation TEXT NOT NULL, -- 'syncToCloud', 'login', etc.
+    message TEXT NOT NULL,
+    stack_trace TEXT,
+    metadata TEXT, -- JSON estruturado para contexto adicional
+    is_sync INTEGER DEFAULT 0, -- Logs podem não precisar ser sincronizados
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

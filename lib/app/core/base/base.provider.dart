@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:serviceflow/app/core/base/base.model.dart';
 import 'package:serviceflow/app/core/http/app_client.dart';
+import 'package:serviceflow/app/core/logging/log.service.dart';
 
 /// BaseProvider - Abstração para comunicação com APIs externas
 ///
@@ -10,6 +12,10 @@ import 'package:serviceflow/app/core/http/app_client.dart';
 /// - Métodos CRUD para sincronização com API externa
 abstract class BaseProvider<E extends BaseModel> {
   final AppClient _client = AppClient();
+  final LogService _logger = LogService();
+
+  /// Nome da classe para logging (usado automaticamente)
+  String get _className => runtimeType.toString();
 
   /// Endpoint base para a entidade (ex: '/usuarios', '/clientes')
   String get endpoint;
@@ -35,7 +41,7 @@ abstract class BaseProvider<E extends BaseModel> {
 
       return true;
     } catch (e) {
-      _handleError('syncToCloud', e);
+      handleError('syncToCloud', e);
       return false;
     }
   }
@@ -57,7 +63,7 @@ abstract class BaseProvider<E extends BaseModel> {
 
       return [];
     } catch (e) {
-      _handleError('fetchFromCloud', e);
+      handleError('fetchFromCloud', e);
       return [];
     }
   }
@@ -68,21 +74,15 @@ abstract class BaseProvider<E extends BaseModel> {
       await _client.delete('$endpoint/$id');
       return true;
     } catch (e) {
-      _handleError('deleteFromCloud', e);
+      handleError('deleteFromCloud', e);
       return false;
     }
   }
 
-  /// Tratamento padronizado de erros
-  void _handleError(String operation, dynamic error) {
-    // Log do erro (implementar logger apropriado)
-    print('[$runtimeType] Error in $operation: $error');
-
-    // Aqui pode implementar:
-    // - Logging estruturado
-    // - Métricas de erro
-    // - Notificações para desenvolvedores
-    // - Retry logic específico
+  /// Tratamento centralizado de erros com logging estruturado
+  @protected
+  void handleError(String operation, dynamic error) {
+    _logger.handleProviderError(_className, operation, error);
   }
 
   /// Hook para validações específicas antes de sincronizar
