@@ -92,10 +92,10 @@ lib/
 │   │   │   ├── base.service.dart        # BaseService<E,R,V> orquestração
 │   │   │   ├── base.controller.dart     # BaseController<E,R,V,S> UI states
 │   │   │   ├── base.provider.dart       # BaseProvider<E> → AppClient
-│   │   │   ├── base.schedule.dart       # BaseSchedule<E,R,P> background sync
-│   │   │   └── sqlite/
-│   │   │       └── dp.helper.dart       # DbHelper singleton (SQLite)
+│   │   │   └── base.schedule.dart       # BaseSchedule<E,R,P> background sync
 │   │   ├── helpers/            # Utilities & Extensions
+│   │   │   ├── database_helper.dart     # DbHelper singleton (SQLite)
+│   │   │   └── app.config.dart          # Configurações da aplicação
 │   │   ├── mixins/             # Loader, Messager, UiFeedback
 │   │   ├── repositories/       # Repositories compartilhados
 │   │   ├── services/           # AuthService, ScheduleManager, SyncSystemInitializer
